@@ -1,6 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { PropsWithChildren } from 'react';
-import { Role, hasRole, hasAnyRole, isAdmin, isSuperAdmin } from '@/types/role';
+import { Role, hasRole, hasAnyRole, isAdmin, isSuperAdmin, UserWithRole } from '@/types/role';
 
 interface RoleGuardProps extends PropsWithChildren {
   /**
@@ -66,7 +66,7 @@ export function RoleGuard({
   fallback = null,
   children,
 }: RoleGuardProps) {
-  const { auth } = usePage<{ auth: { user: any } }>().props;
+  const { auth } = usePage<{ auth: { user: UserWithRole } }>().props;
   const user = auth.user;
 
   // Check role conditions
@@ -89,7 +89,7 @@ export function RoleGuard({
  * Hook to check user roles
  */
 export function useRole() {
-  const { auth } = usePage<{ auth: { user: any } }>().props;
+  const { auth } = usePage<{ auth: { user: UserWithRole } }>().props;
   const user = auth.user;
 
   return {

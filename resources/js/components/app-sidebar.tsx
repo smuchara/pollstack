@@ -11,7 +11,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import { type NavItem } from '@/types';
+import { type NavItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import { BookOpen, Folder, LayoutGrid, Users } from 'lucide-react';
@@ -32,7 +32,7 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { auth } = usePage().props as any;
+    const { auth } = usePage<SharedData>().props;
     const user = auth?.user;
     
     // Determine the correct dashboard URL based on user role

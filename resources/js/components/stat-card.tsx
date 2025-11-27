@@ -12,7 +12,10 @@ interface StatCardProps {
 }
 
 export function StatCard({ title, value, icon: Icon, description, href, colorClass, bgClass }: StatCardProps) {
-    const Content = () => (
+    const baseClasses = "group relative overflow-hidden rounded-xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md";
+    const hoverClasses = href ? "hover:border-primary/50 cursor-pointer" : "hover:border-border/80";
+
+    const content = (
         <>
             <div className="flex items-center justify-between">
                 <div>
@@ -33,20 +36,17 @@ export function StatCard({ title, value, icon: Icon, description, href, colorCla
         </>
     );
 
-    const baseClasses = "group relative overflow-hidden rounded-xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md";
-    const hoverClasses = href ? "hover:border-primary/50 cursor-pointer" : "hover:border-border/80";
-
     if (href) {
         return (
             <Link href={href} className={`${baseClasses} ${hoverClasses}`}>
-                <Content />
+                {content}
             </Link>
         );
     }
 
     return (
         <div className={`${baseClasses} ${hoverClasses}`}>
-            <Content />
+            {content}
         </div>
     );
 }

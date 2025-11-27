@@ -1,4 +1,4 @@
-import { Info, X, CheckCircle2, Pin, SlidersHorizontal, MousePointerClick } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
