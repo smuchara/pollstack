@@ -8,7 +8,6 @@ import {
     CheckCircle2,
     ArrowRight,
     Sparkles,
-    Vote,
     Menu,
 } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';

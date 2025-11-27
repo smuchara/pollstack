@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,11 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
     // User management - accessible by admin and super admin
     Route::get('users', [UserController::class, 'index'])->name('users.index');
+
+    // User invitations - accessible by admin and super admin
+    Route::post('invitations', [InvitationController::class, 'invite'])->name('invitations.send');
+    Route::delete('invitations/{id}', [InvitationController::class, 'cancel'])->name('invitations.cancel');
+    Route::post('invitations/{id}/resend', [InvitationController::class, 'resend'])->name('invitations.resend');
 
     // Settings - accessible by admin and super admin
     Route::get('settings', function () {

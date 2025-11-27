@@ -1,7 +1,7 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
-import { Edit, Trash2, UserPlus, ArrowUpDown, Filter, Pin, Shield } from 'lucide-react';
+import { Edit, Trash2, ArrowUpDown, Filter, Pin, Shield, Mail } from 'lucide-react';
 
 // Components
 import AppLayout from '@/layouts/app-layout';
@@ -10,6 +10,7 @@ import { useRole } from '@/components/role-guard';
 import { TipsDialog } from '@/components/ui/tips-dialog';
 import { RoleBadge } from '@/components/ui/role-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { InviteUsersModal } from '@/components/invite-users-modal';
 
 // Types
 import { Role } from '@/types/role';
@@ -37,7 +38,7 @@ interface Props {
 }
 
 export default function UsersList({ users, pagination }: Props) {
-  const { isSuperAdmin, hasRole } = useRole();
+  const { isSuperAdmin, hasRole, isAdmin } = useRole();
   const { auth } = usePage<SharedData>().props;
   const user = auth?.user;
 
@@ -47,6 +48,8 @@ export default function UsersList({ users, pagination }: Props) {
     pageIndex: pagination.current_page - 1,
     pageSize: pagination.per_page,
   });
+
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   const dashboardUrl = user?.is_super_admin
       ? '/super-admin/dashboard'
@@ -194,14 +197,14 @@ export default function UsersList({ users, pagination }: Props) {
               <div className="flex items-center gap-2">
                 <TipsDialog title="Table Features Guide" tips={helpTips} />
 
-                {isSuperAdmin() && (
-                    <Link
-                        href="/admin/users/create"
+                {isAdmin() && (
+                    <button
+                        onClick={() => setIsInviteModalOpen(true)}
                         className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-95"
                     >
-                      <UserPlus className="h-4 w-4" />
-                      <span>Add User</span>
-                    </Link>
+                      <Mail className="h-4 w-4" />
+                      <span>Invite Users</span>
+                    </button>
                 )}
               </div>
             </div>
@@ -224,6 +227,12 @@ export default function UsersList({ users, pagination }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Invite Users Modal */}
+        <InviteUsersModal
+          isOpen={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+        />
       </AppLayout>
   );
 }
