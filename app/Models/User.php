@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Role;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -95,6 +96,7 @@ class User extends Authenticatable implements MustVerifyEmail
                 return true;
             }
         }
+
         return false;
     }
 
@@ -104,5 +106,167 @@ class User extends Authenticatable implements MustVerifyEmail
     public function hasPrivilegeOf(Role $role): bool
     {
         return $this->role->hasPrivilegeOf($role);
+    }
+
+    /**
+     * Get the permission groups assigned to this user.
+     */
+    public function permissionGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(PermissionGroup::class, 'user_permission_group')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get direct permissions assigned to this user.
+     */
+    public function directPermissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions')
+            ->withPivot('granted')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get all permissions for this user (from groups + direct).
+     */
+    public function getAllPermissions(): array
+    {
+        // Super admin has all permissions
+        if ($this->isSuperAdmin()) {
+            return Permission::pluck('name')->toArray();
+        }
+
+        // Collect permissions from groups
+        $groupPermissions = $this->permissionGroups()
+            ->with('permissions')
+            ->get()
+            ->pluck('permissions')
+            ->flatten()
+            ->pluck('name')
+            ->unique();
+
+        // Collect direct permissions
+        $directPermissions = $this->directPermissions()
+            ->wherePivot('granted', true)
+            ->pluck('name');
+
+        // Collect revoked permissions
+        $revokedPermissions = $this->directPermissions()
+            ->wherePivot('granted', false)
+            ->pluck('name');
+
+        // Merge and filter
+        return $groupPermissions
+            ->merge($directPermissions)
+            ->diff($revokedPermissions)
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Check if the user has a specific permission.
+     */
+    public function hasPermission(string $permissionName): bool
+    {
+        // Super admin always has all permissions
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        return in_array($permissionName, $this->getAllPermissions());
+    }
+
+    /**
+     * Check if the user has any of the given permissions.
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the user has all of the given permissions.
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if (! $this->hasPermission($permission)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Assign permission groups to this user.
+     * Auto-promotes user to admin if they are a regular user.
+     */
+    public function assignPermissionGroups(array $groupIds): void
+    {
+        $this->permissionGroups()->sync($groupIds);
+        $this->syncRoleWithPermissions();
+    }
+
+    /**
+     * Grant a direct permission to this user.
+     * Auto-promotes user to admin if they are a regular user.
+     */
+    public function grantPermission(int $permissionId): void
+    {
+        $this->directPermissions()->syncWithoutDetaching([
+            $permissionId => ['granted' => true],
+        ]);
+        $this->syncRoleWithPermissions();
+    }
+
+    /**
+     * Revoke a permission from this user.
+     */
+    public function revokePermission(int $permissionId): void
+    {
+        $this->directPermissions()->syncWithoutDetaching([
+            $permissionId => ['granted' => false],
+        ]);
+        $this->syncRoleWithPermissions();
+    }
+
+    /**
+     * Sync user role with their permission state.
+     * Promotes regular users to admin when they get permissions.
+     * Demotes admins to regular users when they lose all permissions.
+     */
+    protected function syncRoleWithPermissions(): void
+    {
+        // Never modify super admin role
+        if ($this->isSuperAdmin()) {
+            return;
+        }
+
+        // Refresh to get latest permission associations
+        $this->refresh();
+
+        // Check if user has any permission groups or direct granted permissions
+        $hasPermissionGroups = $this->permissionGroups()->count() > 0;
+        $hasDirectPermissions = $this->directPermissions()->wherePivot('granted', true)->count() > 0;
+        $hasAnyPermissions = $hasPermissionGroups || $hasDirectPermissions;
+
+        // Promote user to admin if they have permissions
+        if ($this->isUser() && $hasAnyPermissions) {
+            $this->update(['role' => Role::ADMIN]);
+        }
+
+        // Demote admin to user if they have no permissions
+        if ($this->isAdmin() && ! $hasAnyPermissions) {
+            $this->update(['role' => Role::USER]);
+        }
     }
 }

@@ -17,7 +17,15 @@ Route::post('invitations/accept/{token}', [InvitationController::class, 'accept'
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
+        $user = auth()->user();
+
+        // Redirect admins and super admins to their dashboard with stats
+        if ($user->isAdmin() || $user->isSuperAdmin()) {
+            return redirect()->route($user->isSuperAdmin() ? 'super-admin.dashboard' : 'admin.dashboard');
+        }
+
+        // Regular users see placeholder dashboard
+        return Inertia::render('user-dashboard');
     })->name('dashboard');
 });
 

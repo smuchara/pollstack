@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsureUserHasAnyRole;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsAdmin;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.any' => EnsureUserHasAnyRole::class,
             'admin' => EnsureUserIsAdmin::class,
             'super.admin' => EnsureUserIsSuperAdmin::class,
+            'permission' => CheckPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

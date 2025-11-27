@@ -10,6 +10,7 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
+import toast from 'react-hot-toast';
 
 interface LoginProps {
     status?: string;
@@ -18,7 +19,6 @@ interface LoginProps {
 }
 
 export default function Login({
-    status,
     canResetPassword,
     canRegister,
 }: LoginProps) {
@@ -32,6 +32,13 @@ export default function Login({
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
+                options={{
+                    onError: (errors) => {
+                        if (errors.email || errors.password) {
+                            toast.error('Invalid credentials. Please try again.');
+                        }
+                    },
+                }}
                 className="flex flex-col gap-6"
             >
                 {({ processing, errors }) => (
@@ -110,11 +117,6 @@ export default function Login({
                 )}
             </Form>
 
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
         </AuthLayout>
     );
 }

@@ -1,8 +1,8 @@
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { send } from '@/routes/verification';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Transition } from '@headlessui/react';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
+import toast from 'react-hot-toast';
 
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
@@ -45,10 +45,13 @@ export default function Profile({
                         {...ProfileController.update.form()}
                         options={{
                             preserveScroll: true,
+                            onSuccess: () => {
+                                toast.success('Profile updated successfully');
+                            },
                         }}
                         className="space-y-6"
                     >
-                        {({ processing, recentlySuccessful, errors }) => (
+                        {({ processing, errors }) => (
                             <>
                                 <div className="grid gap-2">
                                     <Label htmlFor="name">Name</Label>
@@ -123,18 +126,6 @@ export default function Profile({
                                     >
                                         Save
                                     </Button>
-
-                                    <Transition
-                                        show={recentlySuccessful}
-                                        enter="transition ease-in-out"
-                                        enterFrom="opacity-0"
-                                        leave="transition ease-in-out"
-                                        leaveTo="opacity-0"
-                                    >
-                                        <p className="text-sm text-neutral-600">
-                                            Saved
-                                        </p>
-                                    </Transition>
                                 </div>
                             </>
                         )}

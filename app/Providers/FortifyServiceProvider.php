@@ -24,18 +24,19 @@ class FortifyServiceProvider extends ServiceProvider
     {
         // Custom login response to redirect based on role
         $this->app->singleton(LoginResponse::class, function () {
-            return new class implements LoginResponse {
+            return new class implements LoginResponse
+            {
                 public function toResponse($request)
                 {
                     $user = $request->user();
-                    
+
                     // Redirect based on user role
                     $redirectUrl = match ($user->role) {
                         Role::SUPER_ADMIN => '/super-admin/dashboard',
                         Role::ADMIN => '/admin/dashboard',
                         default => '/dashboard',
                     };
-                    
+
                     return redirect()->intended($redirectUrl);
                 }
             };

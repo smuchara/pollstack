@@ -74,7 +74,7 @@ class InvitationController extends Controller
         $invitation = UserInvitation::where('token', $token)->first();
 
         // Check if invitation exists
-        if (!$invitation) {
+        if (! $invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid invitation link.');
         }
@@ -113,7 +113,7 @@ class InvitationController extends Controller
             ->valid()
             ->first();
 
-        if (!$invitation) {
+        if (! $invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid or expired invitation link.');
         }

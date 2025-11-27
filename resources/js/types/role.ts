@@ -18,6 +18,7 @@ export interface UserWithRole {
   is_super_admin: boolean;
   is_admin: boolean;
   is_user: boolean;
+  permissions: string[];
 }
 
 /**
