@@ -12,17 +12,11 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
+import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users } from 'lucide-react';
+import { useMemo } from 'react';
 import AppLogo from './app-logo';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
 
 const footerNavItems: NavItem[] = [
     {
@@ -38,13 +32,49 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props as any;
+    const user = auth?.user;
+    
+    // Determine the correct dashboard URL based on user role
+    const dashboardUrl = useMemo(() => {
+        if (user?.is_super_admin) {
+            return '/super-admin/dashboard';
+        }
+        if (user?.is_admin) {
+            return '/admin/dashboard';
+        }
+        return dashboard().url;
+    }, [user]);
+    
+    // Build navigation items based on user role
+    const mainNavItems: NavItem[] = useMemo(() => {
+        const items: NavItem[] = [
+            {
+                title: 'Dashboard',
+                href: dashboardUrl,
+                icon: LayoutGrid,
+            },
+        ];
+        
+        // Add User Management for admins and super admins
+        if (user?.is_admin || user?.is_super_admin) {
+            items.push({
+                title: 'User Management',
+                href: '/admin/users',
+                icon: Users,
+            });
+        }
+        
+        return items;
+    }, [user, dashboardUrl]);
+    
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={dashboardUrl} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
