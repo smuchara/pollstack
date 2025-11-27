@@ -1,5 +1,7 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import AppLogo from '@/components/app-logo';
+import { Toaster } from '@/components/ui/toaster';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { home } from '@/routes';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
@@ -15,7 +17,11 @@ export default function AuthSimpleLayout({
                                              title,
                                              description,
                                          }: PropsWithChildren<AuthLayoutProps>) {
+    // Handle flash message toasts
+    useToastNotifications();
+    
     return (
+        <>
         <div className="min-h-screen w-full bg-white dark:bg-zinc-950 lg:grid lg:grid-cols-2">
 
             {/* Left Side: Gradient Card */}
@@ -79,5 +85,7 @@ export default function AuthSimpleLayout({
                 </div>
             </div>
         </div>
+        <Toaster />
+        </>
     );
 }

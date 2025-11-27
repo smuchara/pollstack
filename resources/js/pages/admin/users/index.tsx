@@ -1,7 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ColumnDef, PaginationState, Updater } from '@tanstack/react-table';
-import { Edit, Trash2, ArrowUpDown, Filter, Pin, Shield, Mail } from 'lucide-react';
+import { Edit, Trash2, ArrowUpDown, Filter, Pin, Shield, Mail, ShieldCheck } from 'lucide-react';
 
 // Components
 import AppLayout from '@/layouts/app-layout';
@@ -93,6 +93,12 @@ export default function UsersList({ users, pagination }: Props) {
     return isSuperAdmin() && targetUser.role !== 'super_admin';
   };
 
+  const canManagePermissions = (targetUser: User) => {
+    if (isSuperAdmin()) return true;
+    if (hasRole(Role.ADMIN)) return targetUser.role === 'user';
+    return false;
+  };
+
   // --- Table Definition ---
 
   const columns: ColumnDef<User>[] = [
@@ -139,6 +145,18 @@ export default function UsersList({ users, pagination }: Props) {
       header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => (
           <div className="flex justify-end gap-1">
+            {canManagePermissions(row.original) && (
+                <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.visit(`/admin/users/${row.original.id}/permissions`);
+                    }}
+                    className="group rounded-md p-1.5 text-muted-foreground transition-all hover:bg-purple-500/10 hover:text-purple-600"
+                    title="Manage Permissions"
+                >
+                  <ShieldCheck className="h-4 w-4 transition-transform group-hover:scale-110" />
+                </button>
+            )}
             {canEditUser(row.original) && (
                 <button
                     onClick={(e) => {

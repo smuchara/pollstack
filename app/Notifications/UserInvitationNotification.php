@@ -40,7 +40,7 @@ class UserInvitationNotification extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('You\'ve been invited to join PollStack')
-            ->greeting("Hello!")
+            ->greeting('Hello!')
             ->line("{$inviterName} has invited you to join PollStack.")
             ->line('Click the button below to accept the invitation and create your account.')
             ->action('Accept Invitation', $acceptUrl)

@@ -37,7 +37,7 @@ class InviteUsersRequest extends FormRequest
                         ->whereNull('accepted_at')
                         ->where('expires_at', '>', now())
                         ->exists();
-                    
+
                     if ($exists) {
                         $fail('This email already has a pending invitation.');
                     }
@@ -83,7 +83,7 @@ class InviteUsersRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Set default role to 'user' if not provided
-        if (!$this->has('role')) {
+        if (! $this->has('role')) {
             $this->merge(['role' => Role::USER->value]);
         }
     }
