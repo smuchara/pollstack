@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Save, Shield, Users as UsersIcon, Lock, Unlock, ChevronRight } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 
 // Components
 import AppLayout from '@/layouts/app-layout';
+import { useRole } from '@/components/role-guard';
+import { type SharedData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -53,13 +55,20 @@ export default function UserPermissions({
   user_permission_groups,
   user_direct_permissions,
 }: Props) {
+  const { isSuperAdmin } = useRole();
+  const { organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
+
+  const baseUrl = isSuperAdmin()
+    ? '/super-admin'
+    : (organization_slug ? `/organization/${organization_slug}/admin` : '/admin');
+
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(Object.keys(permissions))
   );
 
   const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: user.role === 'super_admin' ? '/super-admin/dashboard' : '/admin/dashboard' },
-    { title: 'User Management', href: '/admin/users' },
+    { title: 'Dashboard', href: `${baseUrl}/dashboard` },
+    { title: 'User Management', href: `${baseUrl}/users` },
     { title: user.name, href: '#' },
     { title: 'Permissions', href: `#` },
   ];
@@ -82,7 +91,7 @@ export default function UserPermissions({
       form.data.permission_group_ids.includes(g.id)
     );
 
-    form.put(`/admin/users/${user.id}/permissions`, {
+    form.put(`${baseUrl}/users/${user.id}/permissions`, {
       onSuccess: () => {
         // Show individual toasts for each assigned permission group
         if (assignedGroups.length > 0) {
@@ -242,11 +251,10 @@ export default function UserPermissions({
                     return (
                       <div
                         key={group.id}
-                        className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${
-                          isSelected
+                        className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${isSelected
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-muted-foreground'
-                        }`}
+                          }`}
                       >
                         <Checkbox
                           id={`group-${group.id}`}
@@ -345,9 +353,8 @@ export default function UserPermissions({
                             </div>
                           </div>
                           <ChevronRight
-                            className={`h-5 w-5 transition-transform ${
-                              isExpanded ? 'rotate-90' : ''
-                            }`}
+                            className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-90' : ''
+                              }`}
                           />
                         </button>
 

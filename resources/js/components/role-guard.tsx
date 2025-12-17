@@ -1,6 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { PropsWithChildren } from 'react';
-import { Role, hasRole, hasAnyRole, isAdmin, isSuperAdmin, UserWithRole } from '@/types/role';
+import { Role, hasRole, hasAnyRole, isAdmin, isSuperAdmin, isClientSuperAdmin, UserWithRole } from '@/types/role';
 
 interface RoleGuardProps extends PropsWithChildren {
   /**
@@ -20,6 +20,10 @@ interface RoleGuardProps extends PropsWithChildren {
    */
   requireSuperAdmin?: boolean;
   /**
+   * Require client super admin (or super admin)
+   */
+  requireClientSuperAdmin?: boolean;
+  /**
    * Fallback component if user doesn't have required role
    */
   fallback?: React.ReactNode;
@@ -27,42 +31,13 @@ interface RoleGuardProps extends PropsWithChildren {
 
 /**
  * Guard component that shows/hides content based on user role
- *
- * @example
- * // Show content only to super admins
- * <RoleGuard requireSuperAdmin>
- *   <button>Delete System</button>
- * </RoleGuard>
- *
- * @example
- * // Show content to admins (including super admins)
- * <RoleGuard requireAdmin>
- *   <Link href="/admin">Admin Panel</Link>
- * </RoleGuard>
- *
- * @example
- * // Show content to specific role
- * <RoleGuard role={Role.ADMIN}>
- *   <p>Admin only content</p>
- * </RoleGuard>
- *
- * @example
- * // Show content to any of multiple roles
- * <RoleGuard anyRole={[Role.ADMIN, Role.SUPER_ADMIN]}>
- *   <p>Admin or Super Admin content</p>
- * </RoleGuard>
- *
- * @example
- * // With fallback
- * <RoleGuard requireAdmin fallback={<p>Access Denied</p>}>
- *   <AdminPanel />
- * </RoleGuard>
  */
 export function RoleGuard({
   role,
   anyRole,
   requireAdmin,
   requireSuperAdmin,
+  requireClientSuperAdmin,
   fallback = null,
   children,
 }: RoleGuardProps) {
@@ -72,6 +47,7 @@ export function RoleGuard({
   // Check role conditions
   const hasAccess = (() => {
     if (requireSuperAdmin) return isSuperAdmin(user);
+    if (requireClientSuperAdmin) return isClientSuperAdmin(user) || isSuperAdmin(user);
     if (requireAdmin) return isAdmin(user);
     if (role) return hasRole(user, role);
     if (anyRole) return hasAnyRole(user, anyRole);
@@ -98,6 +74,7 @@ export function useRole() {
     hasAnyRole: (roles: Role[]) => hasAnyRole(user, roles),
     isAdmin: () => isAdmin(user),
     isSuperAdmin: () => isSuperAdmin(user),
+    isClientSuperAdmin: () => isClientSuperAdmin(user),
     isUser: () => user?.is_user ?? false,
     role: user?.role as Role | undefined,
     roleLabel: user?.role_label,

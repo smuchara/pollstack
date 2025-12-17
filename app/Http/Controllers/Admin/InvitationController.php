@@ -24,11 +24,12 @@ class InvitationController extends Controller
         $emails = $validated['emails'];
         $role = $validated['role'] ?? Role::USER->value;
         $invitedBy = $request->user()->id;
+        $organizationId = $request->user()->organization_id;
 
         $invitations = [];
         $successCount = 0;
 
-        DB::transaction(function () use ($emails, $role, $invitedBy, &$invitations, &$successCount) {
+        DB::transaction(function () use ($emails, $role, $invitedBy, $organizationId, &$invitations, &$successCount) {
             foreach ($emails as $email) {
                 try {
                     // Create the invitation
@@ -37,6 +38,7 @@ class InvitationController extends Controller
                         'token' => UserInvitation::generateToken(),
                         'invited_by' => $invitedBy,
                         'role' => $role,
+                        'organization_id' => $organizationId,
                         'expires_at' => now()->addDays(7), // 7 days expiry
                     ]);
 
@@ -74,7 +76,7 @@ class InvitationController extends Controller
         $invitation = UserInvitation::where('token', $token)->first();
 
         // Check if invitation exists
-        if (! $invitation) {
+        if (!$invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid invitation link.');
         }
@@ -95,6 +97,7 @@ class InvitationController extends Controller
             'invitation' => [
                 'token' => $invitation->token,
                 'email' => $invitation->email,
+                'name' => $invitation->name,
                 'role' => $invitation->role,
                 'inviter' => [
                     'name' => $invitation->inviter->name,
@@ -113,7 +116,7 @@ class InvitationController extends Controller
             ->valid()
             ->first();
 
-        if (! $invitation) {
+        if (!$invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid or expired invitation link.');
         }
@@ -130,6 +133,7 @@ class InvitationController extends Controller
                 'email' => $invitation->email,
                 'password' => bcrypt($validated['password']),
                 'role' => $invitation->role,
+                'organization_id' => $invitation->organization_id,
                 'email_verified_at' => now(), // Auto-verify email for invited users
             ]);
 

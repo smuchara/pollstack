@@ -14,7 +14,7 @@ import { dashboard } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Folder, LayoutGrid, UserPlus, Users } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
@@ -32,20 +32,28 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
     const user = auth?.user;
-    
+
+    // Build base URL for tenant context  
+    const tenantBaseUrl = organization_slug
+        ? `/organization/${organization_slug}/admin`
+        : '/admin';
+
     // Determine the correct dashboard URL based on user role
     const dashboardUrl = useMemo(() => {
         if (user?.is_super_admin) {
             return '/super-admin/dashboard';
         }
+        if (user?.is_admin && organization_slug) {
+            return `${tenantBaseUrl}/dashboard`;
+        }
         if (user?.is_admin) {
             return '/admin/dashboard';
         }
         return dashboard().url;
-    }, [user]);
-    
+    }, [user, organization_slug, tenantBaseUrl]);
+
     // Build navigation items based on user role
     const mainNavItems: NavItem[] = useMemo(() => {
         const items: NavItem[] = [
@@ -55,19 +63,38 @@ export function AppSidebar() {
                 icon: LayoutGrid,
             },
         ];
-        
-        // Add User Management for admins and super admins
-        if (user?.is_admin || user?.is_super_admin) {
+
+        // Add User Management for admins (tenant-aware) and super admins
+        if (user?.is_admin && !user?.is_super_admin) {
             items.push({
                 title: 'User Management',
-                href: '/admin/users',
+                href: `${tenantBaseUrl}/users`,
                 icon: Users,
             });
         }
-        
+
+        // Super admin items (global, not tenant-specific)
+        if (user?.is_super_admin) {
+            items.push({
+                title: 'User Management',
+                href: '/super-admin/users',
+                icon: Users,
+            });
+            items.push({
+                title: 'Polls',
+                href: '/super-admin/polls',
+                icon: BarChart3,
+            });
+            items.push({
+                title: 'Onboarding',
+                href: '/super-admin/onboarding',
+                icon: UserPlus,
+            });
+        }
+
         return items;
-    }, [user, dashboardUrl]);
-    
+    }, [user, dashboardUrl, tenantBaseUrl]);
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

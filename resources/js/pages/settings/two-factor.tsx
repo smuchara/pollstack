@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { disable, enable, show } from '@/routes/two-factor';
 import { type BreadcrumbItem } from '@/types';
-import { Form, Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { ShieldBan, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,17 +16,21 @@ interface TwoFactorProps {
     twoFactorEnabled?: boolean;
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Two-Factor Authentication',
-        href: show.url(),
-    },
-];
-
 export default function TwoFactor({
     requiresConfirmation = false,
     twoFactorEnabled = false,
 }: TwoFactorProps) {
+    const { url } = usePage<{ url: string }>().props;
+    const [processingEnable, setProcessingEnable] = useState(false);
+    const [processingDisable, setProcessingDisable] = useState(false);
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: 'Two-Factor Authentication',
+            href: url || '/settings/two-factor',
+        },
+    ];
+
     const {
         qrCodeSvg,
         hasSetupData,
@@ -39,6 +42,29 @@ export default function TwoFactor({
         errors,
     } = useTwoFactorAuth();
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
+
+    const handleEnable = () => {
+        setProcessingEnable(true);
+        router.post('/user/two-factor-authentication', {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowSetupModal(true);
+            },
+            onFinish: () => {
+                setProcessingEnable(false);
+            },
+        });
+    };
+
+    const handleDisable = () => {
+        setProcessingDisable(true);
+        router.delete('/user/two-factor-authentication', {
+            preserveScroll: true,
+            onFinish: () => {
+                setProcessingDisable(false);
+            },
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -66,17 +92,14 @@ export default function TwoFactor({
                             />
 
                             <div className="relative inline">
-                                <Form {...disable.form()}>
-                                    {({ processing }) => (
-                                        <Button
-                                            variant="destructive"
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            <ShieldBan /> Disable 2FA
-                                        </Button>
-                                    )}
-                                </Form>
+                                <Button
+                                    variant="destructive"
+                                    type="button"
+                                    disabled={processingDisable}
+                                    onClick={handleDisable}
+                                >
+                                    <ShieldBan /> {processingDisable ? 'Disabling...' : 'Disable 2FA'}
+                                </Button>
                             </div>
                         </div>
                     ) : (
@@ -98,22 +121,14 @@ export default function TwoFactor({
                                         Continue Setup
                                     </Button>
                                 ) : (
-                                    <Form
-                                        {...enable.form()}
-                                        onSuccess={() =>
-                                            setShowSetupModal(true)
-                                        }
+                                    <Button
+                                        type="button"
+                                        disabled={processingEnable}
+                                        onClick={handleEnable}
                                     >
-                                        {({ processing }) => (
-                                            <Button
-                                                type="submit"
-                                                disabled={processing}
-                                            >
-                                                <ShieldCheck />
-                                                Enable 2FA
-                                            </Button>
-                                        )}
-                                    </Form>
+                                        <ShieldCheck />
+                                        {processingEnable ? 'Enabling...' : 'Enable 2FA'}
+                                    </Button>
                                 )}
                             </div>
                         </div>
@@ -135,3 +150,4 @@ export default function TwoFactor({
         </AppLayout>
     );
 }
+

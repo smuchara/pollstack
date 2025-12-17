@@ -7,9 +7,8 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
 import { type User } from '@/types';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
 
 interface UserMenuContentProps {
@@ -18,6 +17,16 @@ interface UserMenuContentProps {
 
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
+    const { url } = usePage();
+
+    // Extract organization_slug from URL if we're in a tenant context
+    const orgMatch = url.match(/^\/organization\/([^/]+)/);
+    const organizationSlug = orgMatch ? orgMatch[1] : null;
+
+    // Build settings URL based on context
+    const settingsUrl = organizationSlug
+        ? `/organization/${organizationSlug}/settings/profile`
+        : '/settings/profile';
 
     const handleLogout = () => {
         cleanup();
@@ -36,7 +45,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full"
-                        href={edit()}
+                        href={settingsUrl}
                         as="button"
                         prefetch
                         onClick={cleanup}
@@ -62,3 +71,4 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
         </>
     );
 }
+

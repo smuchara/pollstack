@@ -5,6 +5,7 @@ namespace App\Enums;
 enum Role: string
 {
     case SUPER_ADMIN = 'super_admin';
+    case CLIENT_SUPER_ADMIN = 'client_super_admin';
     case ADMIN = 'admin';
     case USER = 'user';
 
@@ -15,6 +16,7 @@ enum Role: string
     {
         return match ($this) {
             self::SUPER_ADMIN => 'Super Admin',
+            self::CLIENT_SUPER_ADMIN => 'Client Super Admin',
             self::ADMIN => 'Admin',
             self::USER => 'User',
         };
@@ -36,7 +38,8 @@ enum Role: string
         $hierarchy = [
             self::USER->value => 1,
             self::ADMIN->value => 2,
-            self::SUPER_ADMIN->value => 3,
+            self::CLIENT_SUPER_ADMIN->value => 3,
+            self::SUPER_ADMIN->value => 4,
         ];
 
         return $hierarchy[$this->value] >= $hierarchy[$role->value];
@@ -55,7 +58,7 @@ enum Role: string
      */
     public function isAdmin(): bool
     {
-        return $this === self::ADMIN || $this === self::SUPER_ADMIN;
+        return $this === self::ADMIN || $this === self::SUPER_ADMIN || $this === self::CLIENT_SUPER_ADMIN;
     }
 
     /**

@@ -13,6 +13,7 @@ import AuthLayout from '@/layouts/auth-layout';
 interface Invitation {
   token: string;
   email: string;
+  name?: string;
   role: string;
   inviter: {
     name: string;
@@ -28,7 +29,7 @@ export default function AcceptInvitation({ invitation }: Props) {
   const [processing, setProcessing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
-    name: '',
+    name: invitation.name || '',
     password: '',
     password_confirmation: '',
   });

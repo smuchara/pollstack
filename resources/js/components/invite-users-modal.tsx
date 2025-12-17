@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { X, Mail, UserPlus, Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,15 @@ interface InviteUsersModalProps {
 }
 
 export function InviteUsersModal({ isOpen, onClose }: InviteUsersModalProps) {
+  const { organization_slug } = usePage<{ organization_slug?: string }>().props;
   const [emails, setEmails] = useState<string[]>(['']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Build base URL for tenant context
+  const baseUrl = organization_slug
+    ? `/organization/${organization_slug}/admin`
+    : '/admin';
 
   if (!isOpen) return null;
 
@@ -57,7 +63,7 @@ export function InviteUsersModal({ isOpen, onClose }: InviteUsersModalProps) {
     setIsSubmitting(true);
 
     router.post(
-      '/admin/invitations',
+      `${baseUrl}/invitations`,
       { emails: validEmails },
       {
         preserveScroll: true,
@@ -87,7 +93,7 @@ export function InviteUsersModal({ isOpen, onClose }: InviteUsersModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
       {/* Modal Content */}
       <div className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-background shadow-2xl animate-in zoom-in-95 duration-200">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border bg-muted/30 px-6 py-4">
           <div className="flex items-center gap-3">

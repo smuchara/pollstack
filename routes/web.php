@@ -15,18 +15,30 @@ Route::get('/', function () {
 Route::get('invitations/accept/{token}', [InvitationController::class, 'show'])->name('invitations.show');
 Route::post('invitations/accept/{token}', [InvitationController::class, 'accept'])->name('invitations.accept');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        $user = auth()->user();
+// Dashboard redirect - routes users to the appropriate context
+Route::middleware(['auth', 'verified'])->get('dashboard', function () {
+    $user = auth()->user();
 
-        // Redirect admins and super admins to their dashboard with stats
-        if ($user->isAdmin() || $user->isSuperAdmin()) {
-            return redirect()->route($user->isSuperAdmin() ? 'super-admin.dashboard' : 'admin.dashboard');
-        }
+    // Super Admins go to the super-admin portal
+    if ($user->isSuperAdmin()) {
+        return redirect()->route('super-admin.dashboard');
+    }
 
-        // Regular users see placeholder dashboard
-        return Inertia::render('user-dashboard');
-    })->name('dashboard');
-});
+    // Users with an organization go to their tenant dashboard
+    if ($user->organization_id) {
+        $slug = $user->organization->slug;
+        return redirect()->route('tenant.dashboard', ['organization_slug' => $slug]);
+    }
 
-require __DIR__.'/settings.php';
+    // Fallback for users without an organization (edge case)
+    return redirect()->route('home')->with('error', 'No organization assigned.');
+})->name('dashboard');
+
+// Tenant Routes
+Route::prefix('organization/{organization_slug}')
+    ->middleware(['auth', 'verified', 'tenant'])
+    ->group(base_path('routes/tenant.php'));
+
+// Global Settings Routes (for Super Admin who doesn't have an organization)
+require __DIR__ . '/settings.php';
+

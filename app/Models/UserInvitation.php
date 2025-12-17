@@ -18,9 +18,11 @@ class UserInvitation extends Model
      */
     protected $fillable = [
         'email',
+        'name',
         'token',
         'invited_by',
         'role',
+        'organization_id',
         'accepted_at',
         'expires_at',
     ];

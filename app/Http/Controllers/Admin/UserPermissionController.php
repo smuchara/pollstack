@@ -12,13 +12,40 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
+
 class UserPermissionController extends Controller
 {
     /**
+     * Get the current organization ID from the authenticated user.
+     */
+    protected function getOrganizationId(): ?int
+    {
+        $org = null;
+        if (app()->bound('organization')) {
+            $org = app('organization')->id;
+        } else {
+            $org = auth()->user()?->organization_id;
+        }
+        return $org;
+    }
+
+    /**
+     * Find a user within the current organization.
+     */
+    protected function findUser(string|int $userId): User
+    {
+        return User::where('id', (int) $userId)
+            ->where('organization_id', $this->getOrganizationId())
+            ->firstOrFail();
+    }
+
+    /**
      * Get user's permissions and groups.
      */
-    public function show(User $user): JsonResponse
+    public function show(string|int $user): JsonResponse
     {
+        $user = $this->findUser($user);
+
         return response()->json([
             'user' => [
                 'id' => $user->id,
@@ -26,12 +53,12 @@ class UserPermissionController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
             ],
-            'permission_groups' => $user->permissionGroups->map(fn ($g) => [
+            'permission_groups' => $user->permissionGroups->map(fn($g) => [
                 'id' => $g->id,
                 'name' => $g->name,
                 'label' => $g->label,
             ]),
-            'direct_permissions' => $user->directPermissions->map(fn ($p) => [
+            'direct_permissions' => $user->directPermissions->map(fn($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
                 'label' => $p->label,
@@ -44,59 +71,55 @@ class UserPermissionController extends Controller
     /**
      * Display the user permission assignment page.
      */
-    public function edit(User $user): Response
+    public function edit(string|int $user): Response
     {
+        $user = $this->findUser($user);
+
         $permissionGroups = PermissionGroup::with('permissions')->get()->map(function ($group) {
             return [
                 'id' => $group->id,
                 'name' => $group->name,
                 'label' => $group->label,
                 'description' => $group->description,
+                'is_system' => $group->is_system,
                 'permissions_count' => $group->permissions->count(),
-                'permissions' => $group->permissions->pluck('id'),
+                'permissions' => $group->permissions->map(fn($p) => [
+                    'id' => $p->id,
+                    'label' => $p->label,
+                ]),
             ];
         });
 
-        $permissions = Permission::all()->groupBy('category')->map(function ($group) {
-            return $group->map(function ($permission) {
-                return [
-                    'id' => $permission->id,
-                    'name' => $permission->name,
-                    'label' => $permission->label,
-                    'description' => $permission->description,
-                    'category' => $permission->category,
-                ];
-            });
-        });
-
-        $userPermissionGroups = $user->permissionGroups->pluck('id');
-        $userDirectPermissions = $user->directPermissions->map(function ($permission) {
-            return [
-                'id' => $permission->id,
-                'granted' => $permission->pivot->granted,
-            ];
-        });
+        $permissions = Permission::all()->groupBy('model');
 
         return Inertia::render('admin/users/permissions', [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role->value,
-                'role_label' => $user->role->label(),
+                'role' => $user->role,
+                'role_label' => $user->role_label,
             ],
             'permission_groups' => $permissionGroups,
             'permissions' => $permissions,
-            'user_permission_groups' => $userPermissionGroups,
-            'user_direct_permissions' => $userDirectPermissions,
+            'user_permission_groups' => $user->permissionGroups->pluck('id'),
+            'user_direct_permissions' => $user->directPermissions->map(fn($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'label' => $p->label,
+                'granted' => $p->pivot->granted,
+            ]),
+            'all_permissions' => $user->getAllPermissions(),
         ]);
     }
 
     /**
      * Assign permission groups to a user.
      */
-    public function assignGroups(Request $request, User $user): JsonResponse
+    public function assignGroups(Request $request, string|int $user): JsonResponse
     {
+        $user = $this->findUser($user);
+
         $validated = $request->validate([
             'permission_group_ids' => 'required|array',
             'permission_group_ids.*' => 'exists:permission_groups,id',
@@ -113,8 +136,10 @@ class UserPermissionController extends Controller
     /**
      * Grant a direct permission to a user.
      */
-    public function grantPermission(Request $request, User $user): JsonResponse
+    public function grantPermission(Request $request, string|int $user): JsonResponse
     {
+        $user = $this->findUser($user);
+
         $validated = $request->validate([
             'permission_id' => 'required|exists:permissions,id',
         ]);
@@ -129,8 +154,10 @@ class UserPermissionController extends Controller
     /**
      * Revoke a permission from a user.
      */
-    public function revokePermission(Request $request, User $user): JsonResponse
+    public function revokePermission(Request $request, string|int $user): JsonResponse
     {
+        $user = $this->findUser($user);
+
         $validated = $request->validate([
             'permission_id' => 'required|exists:permissions,id',
         ]);
@@ -145,8 +172,10 @@ class UserPermissionController extends Controller
     /**
      * Update user's role (separate from permissions).
      */
-    public function updateRole(Request $request, User $user): JsonResponse
+    public function updateRole(Request $request, string|int $user): JsonResponse
     {
+        $user = $this->findUser($user);
+
         $validated = $request->validate([
             'role' => 'required|in:super_admin,admin,user',
         ]);
@@ -162,8 +191,10 @@ class UserPermissionController extends Controller
     /**
      * Batch update user permissions (groups + direct permissions).
      */
-    public function updatePermissions(Request $request, User $user): RedirectResponse
+    public function updatePermissions(Request $request, string|int $user): RedirectResponse
     {
+        $user = $this->findUser($user);
+
         $validated = $request->validate([
             'permission_group_ids' => 'nullable|array',
             'permission_group_ids.*' => 'exists:permission_groups,id',

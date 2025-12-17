@@ -4,6 +4,7 @@
 
 export enum Role {
   SUPER_ADMIN = 'super_admin',
+  CLIENT_SUPER_ADMIN = 'client_super_admin',
   ADMIN = 'admin',
   USER = 'user',
 }
@@ -16,6 +17,7 @@ export interface UserWithRole {
   role: Role;
   role_label: string;
   is_super_admin: boolean;
+  is_client_super_admin: boolean;
   is_admin: boolean;
   is_user: boolean;
   permissions: string[];
@@ -44,7 +46,14 @@ export function isSuperAdmin(user: UserWithRole | null): boolean {
 }
 
 /**
- * Check if user is an admin (including super admin)
+ * Check if user is a client super admin
+ */
+export function isClientSuperAdmin(user: UserWithRole | null): boolean {
+  return user?.is_client_super_admin ?? false;
+}
+
+/**
+ * Check if user is an admin (including super admin and client super admin)
  */
 export function isAdmin(user: UserWithRole | null): boolean {
   return user?.is_admin ?? false;

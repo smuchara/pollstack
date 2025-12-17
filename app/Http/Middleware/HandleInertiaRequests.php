@@ -53,12 +53,19 @@ class HandleInertiaRequests extends Middleware
                     'role' => $user->role->value,
                     'role_label' => $user->role->label(),
                     'is_super_admin' => $user->isSuperAdmin(),
+                    'is_client_super_admin' => $user->isClientSuperAdmin(),
                     'is_admin' => $user->isAdmin(),
                     'is_user' => $user->isUser(),
                     'permissions' => $user->getAllPermissions(),
+                    'organization_id' => $user->organization_id,
                 ] : null,
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            // Share organization slug from route parameter for tenant context
+            // Share organization slug from bound organization or route parameter
+            'organization_slug' => app()->bound('organization')
+                ? app('organization')->slug
+                : $request->route('organization_slug'),
+            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

@@ -25,6 +25,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'role',
+        'organization_id',
     ];
 
     /**
@@ -54,6 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
+
     /**
      * Check if the user is a super admin.
      */
@@ -63,11 +65,55 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Check if the user is a client super admin.
+     */
+    public function isClientSuperAdmin(): bool
+    {
+        return $this->role === Role::CLIENT_SUPER_ADMIN;
+    }
+
+    /**
      * Check if the user is an admin (including super admin).
      */
     public function isAdmin(): bool
     {
-        return $this->role === Role::ADMIN || $this->role === Role::SUPER_ADMIN;
+        return $this->role === Role::ADMIN || $this->role === Role::SUPER_ADMIN || $this->role === Role::CLIENT_SUPER_ADMIN;
+    }
+
+    // ... (keep isUser, hasRole etc as is, no changes needed if they just check Enum values)
+
+    // ...
+
+    /**
+     * Sync user role with their permission state.
+     * Promotes regular users to admin when they get permissions.
+     * Demotes admins to regular users when they lose all permissions.
+     */
+    protected function syncRoleWithPermissions(): void
+    {
+        // Never modify super admin or client super admin role
+        if ($this->isSuperAdmin() || $this->isClientSuperAdmin()) {
+            return;
+        }
+
+        // Refresh to get latest permission associations
+        $this->refresh();
+
+        // Check if user has any permission groups or direct granted permissions
+        $hasPermissionGroups = $this->permissionGroups()->count() > 0;
+        $hasDirectPermissions = $this->directPermissions()->wherePivot('granted', true)->count() > 0;
+        $hasAnyPermissions = $hasPermissionGroups || $hasDirectPermissions;
+
+        // Promote user to admin if they have permissions
+        if ($this->isUser() && $hasAnyPermissions) {
+            $this->update(['role' => Role::ADMIN]);
+        }
+
+        // Demote admin to user if they have no permissions
+        // Note: We only demote 'admin', not 'client_super_admin' (handled by guard above)
+        if ($this->role === Role::ADMIN && !$hasAnyPermissions) {
+            $this->update(['role' => Role::USER]);
+        }
     }
 
     /**
@@ -198,7 +244,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function hasAllPermissions(array $permissions): bool
     {
         foreach ($permissions as $permission) {
-            if (! $this->hasPermission($permission)) {
+            if (!$this->hasPermission($permission)) {
                 return false;
             }
         }
@@ -239,34 +285,12 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->syncRoleWithPermissions();
     }
 
+
     /**
-     * Sync user role with their permission state.
-     * Promotes regular users to admin when they get permissions.
-     * Demotes admins to regular users when they lose all permissions.
+     * Get the organization that owns the user.
      */
-    protected function syncRoleWithPermissions(): void
+    public function organization()
     {
-        // Never modify super admin role
-        if ($this->isSuperAdmin()) {
-            return;
-        }
-
-        // Refresh to get latest permission associations
-        $this->refresh();
-
-        // Check if user has any permission groups or direct granted permissions
-        $hasPermissionGroups = $this->permissionGroups()->count() > 0;
-        $hasDirectPermissions = $this->directPermissions()->wherePivot('granted', true)->count() > 0;
-        $hasAnyPermissions = $hasPermissionGroups || $hasDirectPermissions;
-
-        // Promote user to admin if they have permissions
-        if ($this->isUser() && $hasAnyPermissions) {
-            $this->update(['role' => Role::ADMIN]);
-        }
-
-        // Demote admin to user if they have no permissions
-        if ($this->isAdmin() && ! $hasAnyPermissions) {
-            $this->update(['role' => Role::USER]);
-        }
+        return $this->belongsTo(Organization::class);
     }
 }
