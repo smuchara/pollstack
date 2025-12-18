@@ -39,6 +39,7 @@ class UserController extends Controller
         // Build query scoped to the organization
         $query = User::query()
             ->where('organization_id', $organizationId)
+            ->with('permissionGroups')
             ->select('id', 'name', 'email', 'role', 'email_verified_at', 'created_at');
 
         // Search filter
@@ -86,6 +87,9 @@ class UserController extends Controller
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
             ],
+            'permission_groups' => \App\Models\PermissionGroup::select('id', 'name', 'label', 'scope', 'description')
+                ->where('scope', 'client')
+                ->get(),
         ]);
     }
 

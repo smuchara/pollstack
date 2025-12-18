@@ -31,14 +31,21 @@ class UserController extends Controller
 
         $users = $query->paginate($perPage);
 
+        // Filter permission groups based on user role
+        $currentUser = $request->user();
+        $query = \App\Models\PermissionGroup::select('id', 'name', 'label', 'scope', 'description');
+
+        // Client Admins only see 'client' scoped groups
+        if ($currentUser->isClientSuperAdmin() || $currentUser->isAdmin()) {
+            $query->where('scope', 'client');
+        }
+
         return Inertia::render('admin/users/index', [
             'users' => $users->items(),
             'pagination' => [
                 'total' => $users->total(),
                 'per_page' => $users->perPage(),
                 'current_page' => $users->currentPage(),
-                'last_page' => $users->lastPage(),
-                'from' => $users->firstItem(),
                 'to' => $users->lastItem(),
             ],
             'filters' => [
@@ -46,6 +53,7 @@ class UserController extends Controller
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
             ],
+            'permission_groups' => $query->get(),
         ]);
     }
 

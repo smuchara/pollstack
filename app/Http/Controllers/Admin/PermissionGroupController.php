@@ -15,18 +15,44 @@ class PermissionGroupController extends Controller
     /**
      * Display the permission groups management page.
      */
-    public function index(): Response
+    /**
+     * Display the permission groups management page.
+     */
+    public function index(Request $request): Response
     {
-        $groups = PermissionGroup::with('permissions')->get()->map(function ($group) {
+        $user = $request->user();
+        $isSuperAdmin = $user->isSuperAdmin();
+        $organizationId = $user->organization_id;
+
+        $query = PermissionGroup::with('permissions');
+
+        if ($isSuperAdmin) {
+            // Super Admin sees ALL global groups (null organization_id)
+            // They can filter by scope on frontend if needed
+            $query->whereNull('organization_id');
+        } else {
+            // Client Admin sees:
+            // 1. Global "Client" scoped groups (seeded)
+            // 2. Their OWN tenant groups
+            $query->where(function ($q) use ($organizationId) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('organization_id')->where('scope', 'client');
+                })->orWhere('organization_id', $organizationId);
+            });
+        }
+
+        $groups = $query->get()->map(function ($group) {
             return [
                 'id' => $group->id,
                 'name' => $group->name,
                 'label' => $group->label,
                 'description' => $group->description,
                 'is_system' => $group->is_system,
+                'scope' => $group->scope,
+                'organization_id' => $group->organization_id,
                 'permissions_count' => $group->permissions->count(),
                 'users_count' => $group->users()->count(),
-                'permissions' => $group->permissions->map(fn ($p) => [
+                'permissions' => $group->permissions->map(fn($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
                     'label' => $p->label,
@@ -57,15 +83,32 @@ class PermissionGroupController extends Controller
     /**
      * Get all permission groups.
      */
-    public function list(): JsonResponse
+    public function list(Request $request): JsonResponse
     {
-        $groups = PermissionGroup::with('permissions')->get()->map(function ($group) {
+        $user = $request->user();
+        $isSuperAdmin = $user->isSuperAdmin();
+        $organizationId = $user->organization_id;
+
+        $query = PermissionGroup::with('permissions');
+
+        if ($isSuperAdmin) {
+            $query->whereNull('organization_id');
+        } else {
+            $query->where(function ($q) use ($organizationId) {
+                $q->where(function ($sub) {
+                    $sub->whereNull('organization_id')->where('scope', 'client');
+                })->orWhere('organization_id', $organizationId);
+            });
+        }
+
+        $groups = $query->get()->map(function ($group) {
             return [
                 'id' => $group->id,
                 'name' => $group->name,
                 'label' => $group->label,
                 'description' => $group->description,
                 'is_system' => $group->is_system,
+                'scope' => $group->scope,
                 'permissions' => $group->permissions->pluck('id'),
                 'users_count' => $group->users()->count(),
             ];
@@ -79,19 +122,52 @@ class PermissionGroupController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $isSuperAdmin = $user->isSuperAdmin();
+
         $validated = $request->validate([
-            'name' => 'required|string|unique:permission_groups,name|max:255',
+            // Unique check needs to be tenant-aware or global-aware
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($isSuperAdmin, $user) {
+                    $query = PermissionGroup::where('name', $value);
+                    if ($isSuperAdmin) {
+                        $query->whereNull('organization_id');
+                    } else {
+                        $query->where('organization_id', $user->organization_id);
+                    }
+                    if ($query->exists()) {
+                        $fail('The name has already been taken in this scope.');
+                    }
+                }
+            ],
             'label' => 'required|string|max:255',
             'description' => 'nullable|string',
             'permissions' => 'required|array',
             'permissions.*' => 'exists:permissions,id',
+            'scope' => 'nullable|in:system,client', // Passed from frontend
         ]);
+
+        // Determine scope and org
+        if ($isSuperAdmin) {
+            // Super admin creating Global group
+            $organizationId = null;
+            $scope = $validated['scope'] ?? 'system'; // Default to system if not passed
+        } else {
+            // Client admin creating Tenant group
+            $organizationId = $user->organization_id;
+            $scope = 'client'; // Always client for tenant admins
+        }
 
         $group = PermissionGroup::create([
             'name' => $validated['name'],
             'label' => $validated['label'],
             'description' => $validated['description'] ?? null,
             'is_system' => false,
+            'scope' => $scope,
+            'organization_id' => $organizationId,
         ]);
 
         $group->permissions()->sync($validated['permissions']);
@@ -107,7 +183,19 @@ class PermissionGroupController extends Controller
      */
     public function update(Request $request, PermissionGroup $permissionGroup): JsonResponse
     {
-        // Prevent editing system groups
+        $user = $request->user();
+
+        // Security Check: Tenant Isolation
+        if ($permissionGroup->organization_id && $permissionGroup->organization_id !== $user->organization_id) {
+            return response()->json(['message' => 'Unauthorized Access'], 403);
+        }
+
+        // Security Check: Global System Groups cannot be edited by Client Admins
+        if (!$user->isSuperAdmin() && $permissionGroup->organization_id === null) {
+            return response()->json(['message' => 'Cannot edit global system groups'], 403);
+        }
+
+        // Prevent editing seeded system groups (is_system=true)
         if ($permissionGroup->is_system) {
             return response()->json([
                 'message' => 'System permission groups cannot be modified',
@@ -115,11 +203,27 @@ class PermissionGroupController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|unique:permission_groups,name,'.$permissionGroup->id.'|max:255',
+            'name' => [
+                'sometimes',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($user, $permissionGroup) {
+                    $query = PermissionGroup::where('name', $value)->where('id', '!=', $permissionGroup->id);
+                    if ($permissionGroup->organization_id) {
+                        $query->where('organization_id', $user->organization_id);
+                    } else {
+                        $query->whereNull('organization_id');
+                    }
+                    if ($query->exists()) {
+                        $fail('The name has already been taken.');
+                    }
+                }
+            ],
             'label' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'permissions' => 'sometimes|array',
             'permissions.*' => 'exists:permissions,id',
+            // Scope cannot be changed after creation to avoid confusion
         ]);
 
         $permissionGroup->update([
@@ -141,8 +245,20 @@ class PermissionGroupController extends Controller
     /**
      * Delete a permission group.
      */
-    public function destroy(PermissionGroup $permissionGroup): JsonResponse
+    public function destroy(Request $request, PermissionGroup $permissionGroup): JsonResponse
     {
+        $user = $request->user();
+
+        // Security Check: Tenant Isolation
+        if ($permissionGroup->organization_id && $permissionGroup->organization_id !== $user->organization_id) {
+            return response()->json(['message' => 'Unauthorized Access'], 403);
+        }
+
+        // Prevet client deleting global groups
+        if (!$user->isSuperAdmin() && $permissionGroup->organization_id === null) {
+            return response()->json(['message' => 'Cannot delete global groups'], 403);
+        }
+
         // Prevent deleting system groups
         if ($permissionGroup->is_system) {
             return response()->json([

@@ -90,6 +90,20 @@ export function AppSidebar() {
                 href: '/super-admin/onboarding',
                 icon: UserPlus,
             });
+            items.push({
+                title: 'System Configuration',
+                href: '/super-admin/permission-groups', // Temporary link until config page exists
+                icon: Users, // Using Users/Settings icon
+            });
+        }
+
+        // Client Admin items
+        if (user?.is_admin && !user?.is_super_admin) {
+            items.push({
+                title: 'System Configuration',
+                href: `${tenantBaseUrl}/permission-groups`,
+                icon: Users,
+            });
         }
 
         return items;

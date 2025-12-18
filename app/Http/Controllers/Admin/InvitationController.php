@@ -25,11 +25,12 @@ class InvitationController extends Controller
         $role = $validated['role'] ?? Role::USER->value;
         $invitedBy = $request->user()->id;
         $organizationId = $request->user()->organization_id;
+        $permissionGroupIds = $validated['permission_group_ids'] ?? [];
 
         $invitations = [];
         $successCount = 0;
 
-        DB::transaction(function () use ($emails, $role, $invitedBy, $organizationId, &$invitations, &$successCount) {
+        DB::transaction(function () use ($emails, $role, $invitedBy, $organizationId, $permissionGroupIds, &$invitations, &$successCount) {
             foreach ($emails as $email) {
                 try {
                     // Create the invitation
@@ -38,6 +39,7 @@ class InvitationController extends Controller
                         'token' => UserInvitation::generateToken(),
                         'invited_by' => $invitedBy,
                         'role' => $role,
+                        'permission_group_ids' => $permissionGroupIds,
                         'organization_id' => $organizationId,
                         'expires_at' => now()->addDays(7), // 7 days expiry
                     ]);
@@ -136,6 +138,11 @@ class InvitationController extends Controller
                 'organization_id' => $invitation->organization_id,
                 'email_verified_at' => now(), // Auto-verify email for invited users
             ]);
+
+            // Assign permission groups if present
+            if (!empty($invitation->permission_group_ids)) {
+                $user->assignPermissionGroups($invitation->permission_group_ids);
+            }
 
             // Mark invitation as accepted
             $invitation->markAsAccepted();

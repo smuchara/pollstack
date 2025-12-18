@@ -28,6 +28,11 @@ interface User {
     name: string;
     slug: string;
   };
+  permission_groups?: {
+    id: number;
+    name: string;
+    label: string;
+  }[];
 }
 
 interface Props {
@@ -40,9 +45,15 @@ interface Props {
     from: number;
     to: number;
   };
+  permission_groups?: {
+    id: number;
+    name: string;
+    label: string;
+    description?: string;
+  }[];
 }
 
-export default function UsersList({ users, pagination }: Props) {
+export default function UsersList({ users, pagination, permission_groups = [] }: Props) {
   const { isSuperAdmin, isClientSuperAdmin, hasRole, isAdmin } = useRole();
   const { auth, organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
   const user = auth?.user;
@@ -144,7 +155,21 @@ export default function UsersList({ users, pagination }: Props) {
     {
       accessorKey: 'role',
       header: 'Role',
-      cell: ({ row }) => <RoleBadge role={row.original.role} />,
+      cell: ({ row }) => {
+        // If user has permission groups, display them. Otherwise display base role.
+        if (row.original.permission_groups && row.original.permission_groups.length > 0) {
+          return (
+            <div className="flex flex-wrap gap-1">
+              {row.original.permission_groups.map(group => (
+                <span key={group.id} className="inline-flex items-center rounded-md border border-transparent bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                  {group.label}
+                </span>
+              ))}
+            </div>
+          );
+        }
+        return <RoleBadge role={row.original.role} />;
+      },
       enableColumnFilter: true,
     },
     {
@@ -278,6 +303,7 @@ export default function UsersList({ users, pagination }: Props) {
       <InviteUsersModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
+        permissionGroups={permission_groups}
       />
     </AppLayout>
   );
