@@ -30,8 +30,18 @@ Route::middleware(['auth', 'verified'])->get('dashboard', function () {
         return redirect()->route('tenant.dashboard', ['organization_slug' => $slug]);
     }
 
-    // Fallback for users without an organization (edge case)
-    return redirect()->route('home')->with('error', 'No organization assigned.');
+    // Global users (admins/users without organization) see global dashboard
+    return \Inertia\Inertia::render('dashboard', [
+        'stats' => [
+            'total' => \App\Models\User::count(),
+            'total_verified' => \App\Models\User::whereNotNull('email_verified_at')->count(),
+            'total_unverified' => \App\Models\User::whereNull('email_verified_at')->count(),
+            'total_super_admins' => \App\Models\User::where('role', \App\Enums\Role::SUPER_ADMIN)->count(),
+            'total_admins' => \App\Models\User::where('role', \App\Enums\Role::ADMIN)->count(),
+            'total_users' => \App\Models\User::where('role', \App\Enums\Role::USER)->count(),
+            'recent_signups' => \App\Models\User::where('created_at', '>=', now()->subDays(7))->count(),
+        ],
+    ]);
 })->name('dashboard');
 
 // Tenant Routes
@@ -41,4 +51,10 @@ Route::prefix('organization/{organization_slug}')
 
 // Global Settings Routes (for Super Admin who doesn't have an organization)
 require __DIR__ . '/settings.php';
+
+// Public Polls Routes (accessible to all authenticated users)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/polls', [\App\Http\Controllers\PollController::class, 'index'])->name('polls.index');
+    Route::post('/polls/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('polls.vote');
+});
 

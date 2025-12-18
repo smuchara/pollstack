@@ -32,6 +32,7 @@ use Inertia\Inertia;
 */
 
 use App\Http\Controllers\SuperAdmin\DashboardController as SADashboardController;
+use App\Http\Controllers\SuperAdmin\PollController;
 use App\Http\Controllers\SuperAdmin\UserController as SAUserController;
 use App\Http\Controllers\SuperAdmin\UserPermissionController as SAUserPermissionController;
 
@@ -100,9 +101,11 @@ Route::middleware(['auth', 'verified', 'super.admin'])->prefix('super-admin')->n
     Route::delete('permission-groups/{permissionGroup}', [PermissionGroupController::class, 'destroy'])->name('permission-groups.destroy');
 
     // Polls management - super admin only
-    Route::get('polls', function () {
-        return Inertia::render('super-admin/polls');
-    })->name('polls.index');
+    Route::get('polls', [PollController::class, 'index'])->name('polls.index');
+    Route::post('polls', [PollController::class, 'store'])->name('polls.store');
+    Route::put('polls/{poll}', [PollController::class, 'update'])->name('polls.update');
+    Route::delete('polls/{poll}', [PollController::class, 'destroy'])->name('polls.destroy');
+    Route::get('polls/{poll}/results', [PollController::class, 'results'])->name('polls.results');
 
     // Agency onboarding - super admin only
     Route::get('onboarding', [\App\Http\Controllers\SuperAdmin\TenantProvisioningController::class, 'index'])->name('onboarding.index');

@@ -62,6 +62,11 @@ export function AppSidebar() {
                 href: dashboardUrl,
                 icon: LayoutGrid,
             },
+            {
+                title: 'Polls',
+                href: '/polls',
+                icon: BarChart3,
+            },
         ];
 
         // Add User Management for admins (tenant-aware) and super admins
@@ -81,7 +86,7 @@ export function AppSidebar() {
                 icon: Users,
             });
             items.push({
-                title: 'Polls',
+                title: 'Manage Polls',
                 href: '/super-admin/polls',
                 icon: BarChart3,
             });
