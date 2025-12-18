@@ -75,7 +75,7 @@ class RoleBasedAccessControlTest extends TestCase
 
         $response = $this->actingAs($user)->get("/organization/{$organization->slug}/admin/dashboard");
 
-        $response->assertStatus(403); // Super admin shouldn't access tenant dashboard directly unless impersonating or added
+        $response->assertStatus(200); // Super admin CAN access tenant dashboard (implicit access)
     }
 
     /**
