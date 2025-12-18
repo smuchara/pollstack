@@ -32,9 +32,12 @@ interface CreatePollModalProps {
     isOpen: boolean;
     onClose: () => void;
     poll?: any; // We can refine this type later
+    context?: 'super-admin' | 'organization'; // Add context prop
+    organizationSlug?: string; // Add organization slug for org admin context
+    organizationId?: number; // Add organization ID for org admin context
 }
 
-export default function CreatePollModal({ isOpen, onClose, poll }: CreatePollModalProps) {
+export default function CreatePollModal({ isOpen, onClose, poll, context = 'super-admin', organizationSlug, organizationId }: CreatePollModalProps) {
     const { props } = usePage();
 
     // Initialize options based on poll or default
@@ -111,8 +114,13 @@ export default function CreatePollModal({ isOpen, onClose, poll }: CreatePollMod
             options: options,
         };
 
+        // Determine base URL based on context
+        const baseUrl = context === 'organization'
+            ? `/organization/${organizationSlug}/admin/polls`
+            : '/super-admin/polls';
+
         if (poll) {
-            router.put(`/super-admin/polls/${poll.id}`, dataToSubmit as any, {
+            router.put(`${baseUrl}/${poll.id}`, dataToSubmit as any, {
                 preserveScroll: true,
                 onSuccess: () => {
                     toast.success('Poll updated successfully');
@@ -125,7 +133,7 @@ export default function CreatePollModal({ isOpen, onClose, poll }: CreatePollMod
                 },
             });
         } else {
-            router.post('/super-admin/polls', dataToSubmit as any, {
+            router.post(baseUrl, dataToSubmit as any, {
                 preserveScroll: true,
                 onSuccess: () => {
                     toast.success('Poll created successfully');

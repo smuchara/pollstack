@@ -10,7 +10,8 @@ class PollController extends Controller
 {
     /**
      * Display a listing of active polls for the authenticated user.
-     * Shows system-wide polls and organization-specific polls if user belongs to an organization.
+     * System polls are ONLY visible to users without an organization (for internal testing).
+     * Organization users only see polls created within their organization.
      */
     public function index(Request $request)
     {
@@ -22,14 +23,11 @@ class PollController extends Controller
             ->active()
             ->latest();
 
-        // If user has an organization, show both system polls and org-specific polls
+        // If user has an organization, show ONLY organization-specific polls
         if ($user->organization_id) {
-            $query->where(function ($q) use ($user) {
-                $q->whereNull('organization_id') // System-wide polls
-                    ->orWhere('organization_id', $user->organization_id); // Organization polls
-            });
+            $query->where('organization_id', $user->organization_id);
         } else {
-            // Global users only see system-wide polls
+            // Global users (super admins without organization) ONLY see system-wide polls
             $query->whereNull('organization_id');
         }
 

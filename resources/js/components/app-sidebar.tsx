@@ -62,12 +62,22 @@ export function AppSidebar() {
                 href: dashboardUrl,
                 icon: LayoutGrid,
             },
-            {
+        ];
+
+        // Add Polls link - organization admins go to admin polls, others go to public polls
+        if (user?.is_admin && !user?.is_super_admin && organization_slug) {
+            items.push({
+                title: 'Polls',
+                href: `${tenantBaseUrl}/polls`,
+                icon: BarChart3,
+            });
+        } else {
+            items.push({
                 title: 'Polls',
                 href: '/polls',
                 icon: BarChart3,
-            },
-        ];
+            });
+        }
 
         // Add User Management for admins (tenant-aware) and super admins
         if (user?.is_admin && !user?.is_super_admin) {

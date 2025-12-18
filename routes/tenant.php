@@ -55,6 +55,13 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::post('permission-groups', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'store'])->name('permission-groups.store');
     Route::put('permission-groups/{permissionGroup}', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'update'])->name('permission-groups.update');
     Route::delete('permission-groups/{permissionGroup}', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'destroy'])->name('permission-groups.destroy');
+
+    // Polls management - organization admin
+    Route::get('polls', [\App\Http\Controllers\Admin\PollController::class, 'index'])->name('polls.index');
+    Route::post('polls', [\App\Http\Controllers\Admin\PollController::class, 'store'])->name('polls.store');
+    Route::put('polls/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'update'])->name('polls.update');
+    Route::delete('polls/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'destroy'])->name('polls.destroy');
+    Route::get('polls/{poll}/results', [\App\Http\Controllers\Admin\PollController::class, 'results'])->name('polls.results');
 });
 
 // User Profile Settings (within tenant context) - prefixed to avoid conflicts
