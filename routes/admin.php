@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified', 'super.admin'])->prefix('super-admin')->n
 
     // Super admin user management
     Route::get('users', [SAUserController::class, 'index'])->name('users.index');
+    Route::post('invitations', [InvitationController::class, 'invite'])->name('invitations.send');
     Route::delete('users/{user}', [SAUserController::class, 'destroy'])->name('users.destroy');
 
     // User Permissions

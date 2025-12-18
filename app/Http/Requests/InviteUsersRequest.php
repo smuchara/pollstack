@@ -14,6 +14,7 @@ class InviteUsersRequest extends FormRequest
     public function authorize(): bool
     {
         // Only admins and super admins can invite users
+        // Only admins and super admins can invite users
         return $this->user()->isAdmin();
     }
 
@@ -43,7 +44,20 @@ class InviteUsersRequest extends FormRequest
                     }
                 },
             ],
-            'role' => ['nullable', 'string', Rule::in(Role::values())],
+            'role' => [
+                'nullable',
+                'string',
+                Rule::in(Role::values()),
+                function ($attribute, $value, $fail) {
+                    // Prevent users from inviting someone with a higher role than themselves
+                    $requestedRole = Role::tryFrom($value);
+                    if ($requestedRole && !$this->user()->hasPrivilegeOf($requestedRole)) {
+                        $fail('You cannot invite a user with a higher role than yourself.');
+                    }
+                }
+            ],
+            'permission_group_ids' => ['nullable', 'array'],
+            'permission_group_ids.*' => ['exists:permission_groups,id'],
         ];
     }
 
@@ -83,7 +97,7 @@ class InviteUsersRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Set default role to 'user' if not provided
-        if (! $this->has('role')) {
+        if (!$this->has('role')) {
             $this->merge(['role' => Role::USER->value]);
         }
     }

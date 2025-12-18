@@ -14,6 +14,9 @@ class RoleBasedAccessControlTest extends TestCase
     /**
      * Test that super admin can access super admin routes.
      */
+    /**
+     * Test that super admin can access super admin routes.
+     */
     public function test_super_admin_can_access_super_admin_routes(): void
     {
         $user = User::factory()->superAdmin()->create();
@@ -52,9 +55,12 @@ class RoleBasedAccessControlTest extends TestCase
      */
     public function test_admin_can_access_admin_routes(): void
     {
-        $user = User::factory()->admin()->create();
+        $organization = \App\Models\Organization::factory()->create();
+        $user = User::factory()->admin()->create([
+            'organization_id' => $organization->id,
+        ]);
 
-        $response = $this->actingAs($user)->get('/admin/dashboard');
+        $response = $this->actingAs($user)->get("/organization/{$organization->slug}/admin/dashboard");
 
         $response->assertStatus(200);
     }
@@ -64,11 +70,12 @@ class RoleBasedAccessControlTest extends TestCase
      */
     public function test_super_admin_can_access_admin_routes(): void
     {
+        $organization = \App\Models\Organization::factory()->create();
         $user = User::factory()->superAdmin()->create();
 
-        $response = $this->actingAs($user)->get('/admin/dashboard');
+        $response = $this->actingAs($user)->get("/organization/{$organization->slug}/admin/dashboard");
 
-        $response->assertStatus(200);
+        $response->assertStatus(200); // Super admin CAN access tenant dashboard (implicit access)
     }
 
     /**
@@ -76,9 +83,12 @@ class RoleBasedAccessControlTest extends TestCase
      */
     public function test_user_cannot_access_admin_routes(): void
     {
-        $user = User::factory()->user()->create();
+        $organization = \App\Models\Organization::factory()->create();
+        $user = User::factory()->user()->create([
+            'organization_id' => $organization->id,
+        ]);
 
-        $response = $this->actingAs($user)->get('/admin/dashboard');
+        $response = $this->actingAs($user)->get("/organization/{$organization->slug}/admin/dashboard");
 
         $response->assertStatus(403);
     }
@@ -171,7 +181,7 @@ class RoleBasedAccessControlTest extends TestCase
         $this->assertEquals('Admin', Role::ADMIN->label());
         $this->assertEquals('User', Role::USER->label());
 
-        $this->assertEquals(['super_admin', 'admin', 'user'], Role::values());
+        $this->assertEquals(['super_admin', 'client_super_admin', 'admin', 'user'], Role::values());
 
         $this->assertTrue(Role::SUPER_ADMIN->isSuperAdmin());
         $this->assertFalse(Role::ADMIN->isSuperAdmin());
@@ -189,7 +199,8 @@ class RoleBasedAccessControlTest extends TestCase
      */
     public function test_unauthenticated_users_cannot_access_protected_routes(): void
     {
-        $this->get('/admin/dashboard')->assertRedirect('/login');
+        $organization = \App\Models\Organization::factory()->create();
+        $this->get("/organization/{$organization->slug}/admin/dashboard")->assertRedirect('/login');
         $this->get('/super-admin/dashboard')->assertRedirect('/login');
     }
 
@@ -198,11 +209,14 @@ class RoleBasedAccessControlTest extends TestCase
      */
     public function test_all_admin_routes_are_protected(): void
     {
-        $user = User::factory()->user()->create();
+        $organization = \App\Models\Organization::factory()->create();
+        $user = User::factory()->user()->create([
+            'organization_id' => $organization->id,
+        ]);
 
-        $this->actingAs($user)->get('/admin/dashboard')->assertStatus(403);
-        $this->actingAs($user)->get('/admin/users')->assertStatus(403);
-        $this->actingAs($user)->get('/admin/settings')->assertStatus(403);
+        $this->actingAs($user)->get("/organization/{$organization->slug}/admin/dashboard")->assertStatus(403);
+        $this->actingAs($user)->get("/organization/{$organization->slug}/admin/users")->assertStatus(403);
+        $this->actingAs($user)->get("/organization/{$organization->slug}/admin/settings")->assertStatus(403);
     }
 
     /**

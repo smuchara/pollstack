@@ -15,6 +15,8 @@ class PermissionGroup extends Model
         'label',
         'description',
         'is_system',
+        'scope',
+        'organization_id',
     ];
 
     protected $casts = [

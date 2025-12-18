@@ -48,6 +48,13 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::get('settings', function () {
         return Inertia::render('admin/settings');
     })->name('settings');
+
+    // Permission Groups
+    Route::get('permission-groups', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'index'])->name('permission-groups.index');
+    Route::get('permission-groups/list', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'list'])->name('permission-groups.list');
+    Route::post('permission-groups', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'store'])->name('permission-groups.store');
+    Route::put('permission-groups/{permissionGroup}', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'update'])->name('permission-groups.update');
+    Route::delete('permission-groups/{permissionGroup}', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'destroy'])->name('permission-groups.destroy');
 });
 
 // User Profile Settings (within tenant context) - prefixed to avoid conflicts

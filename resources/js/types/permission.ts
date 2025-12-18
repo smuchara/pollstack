@@ -18,6 +18,8 @@ export interface PermissionGroup {
   label: string;
   description?: string;
   is_system: boolean;
+  scope: 'system' | 'client';
+  organization_id?: number | null;
   permissions: Permission[];
   permissions_count?: number;
   users_count?: number;

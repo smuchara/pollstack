@@ -22,6 +22,7 @@ class UserInvitation extends Model
         'token',
         'invited_by',
         'role',
+        'permission_group_ids',
         'organization_id',
         'accepted_at',
         'expires_at',
@@ -35,6 +36,7 @@ class UserInvitation extends Model
     protected function casts(): array
     {
         return [
+            'permission_group_ids' => 'array',
             'accepted_at' => 'datetime',
             'expires_at' => 'datetime',
         ];

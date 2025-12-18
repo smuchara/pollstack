@@ -1,6 +1,6 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Users, Shield } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Shield, Building, Globe } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -20,11 +20,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 // Types
 import type { BreadcrumbItem } from '@/types';
 import type { PermissionGroup, GroupedPermissions } from '@/types/permission';
 import { CATEGORY_LABELS, CATEGORY_ICONS } from '@/types/permission';
+import { useRole } from '@/components/role-guard';
 
 interface Props {
   groups: PermissionGroup[];
@@ -119,14 +121,23 @@ function PermissionSelector({
 }
 
 export default function PermissionGroups({ groups, permissions }: Props) {
+  const { isSuperAdmin } = useRole();
+  const { organization_slug } = usePage<{ organization_slug?: string }>().props;
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<PermissionGroup | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(Object.keys(permissions)));
 
+  // Dynamic Base URL
+  const baseUrl = isSuperAdmin()
+    ? '/super-admin'
+    : `/organization/${organization_slug}/admin`;
+
   const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/super-admin/dashboard' },
-    { title: 'Permission Groups', href: '/super-admin/permission-groups' },
+    { title: 'Dashboard', href: `${baseUrl}/dashboard` },
+    { title: 'System Configuration', href: '#' },
+    { title: 'Permission Groups', href: `${baseUrl}/permission-groups` },
   ];
 
   const createForm = useForm({
@@ -134,6 +145,7 @@ export default function PermissionGroups({ groups, permissions }: Props) {
     label: '',
     description: '',
     permissions: [] as number[],
+    scope: 'client', // Default scope
   });
 
   const editForm = useForm({
@@ -145,7 +157,7 @@ export default function PermissionGroups({ groups, permissions }: Props) {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    createForm.post('/super-admin/permission-groups', {
+    createForm.post(`${baseUrl}/permission-groups`, {
       onSuccess: () => {
         setIsCreateModalOpen(false);
         createForm.reset();
@@ -161,7 +173,7 @@ export default function PermissionGroups({ groups, permissions }: Props) {
     e.preventDefault();
     if (!selectedGroup) return;
 
-    editForm.put(`/super-admin/permission-groups/${selectedGroup.id}`, {
+    editForm.put(`${baseUrl}/permission-groups/${selectedGroup.id}`, {
       onSuccess: () => {
         setIsEditModalOpen(false);
         setSelectedGroup(null);
@@ -184,7 +196,7 @@ export default function PermissionGroups({ groups, permissions }: Props) {
       return;
     }
 
-    router.delete(`/super-admin/permission-groups/${group.id}`, {
+    router.delete(`${baseUrl}/permission-groups/${group.id}`, {
       onSuccess: () => {
         toast.success('Permission group deleted successfully');
       },
@@ -274,6 +286,21 @@ export default function PermissionGroups({ groups, permissions }: Props) {
                           System
                         </Badge>
                       )}
+                      {!group.is_system && group.scope === 'system' && (
+                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                          System
+                        </Badge>
+                      )}
+                      {!group.is_system && group.organization_id && (
+                        <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                          {group.name} (Tenant)
+                        </Badge>
+                      )}
+                      {!group.is_system && !group.organization_id && group.scope === 'client' && (
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                          Global Client
+                        </Badge>
+                      )}
                     </div>
                     {group.description && (
                       <p className="text-sm text-muted-foreground">{group.description}</p>
@@ -297,6 +324,8 @@ export default function PermissionGroups({ groups, permissions }: Props) {
                     variant="outline"
                     size="sm"
                     onClick={() => openEditModal(group)}
+                    // Disable edit if it's a global group and user is not super admin
+                    disabled={!isSuperAdmin() && group.organization_id === null}
                     className="flex-1 gap-2"
                   >
                     <Edit className="h-3 w-3" />
@@ -307,6 +336,8 @@ export default function PermissionGroups({ groups, permissions }: Props) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(group)}
+                      // Disable delete if it's a global group and user is not super admin
+                      disabled={!isSuperAdmin() && group.organization_id === null}
                       className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -332,6 +363,32 @@ export default function PermissionGroups({ groups, permissions }: Props) {
             </DialogHeader>
 
             <div className="space-y-4 py-4">
+
+              {/* Scope Selection (Super Admin Only) */}
+              {isSuperAdmin() && (
+                <div className="space-y-3 rounded-lg border p-4">
+                  <Label>Group Scope</Label>
+                  <RadioGroup
+                    defaultValue="client"
+                    value={createForm.data.scope}
+                    onValueChange={(val: string) => createForm.setData('scope', val as 'system' | 'client')}
+                    className="flex space-x-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="client" id="scope-client" />
+                      <Label htmlFor="scope-client" className="font-normal cursor-pointer">Client (Tenant)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="system" id="scope-system" />
+                      <Label htmlFor="scope-system" className="font-normal cursor-pointer">System (Admin)</Label>
+                    </div>
+                  </RadioGroup>
+                  <p className="text-xs text-muted-foreground">
+                    Client groups are for tenant users. System groups are for system administrators.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="create-name">Group Name (Slug)</Label>
                 <Input
