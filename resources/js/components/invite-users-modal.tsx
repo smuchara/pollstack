@@ -24,7 +24,7 @@ import { useRole } from '@/components/role-guard';
 
 export function InviteUsersModal({ isOpen, onClose, permissionGroups = [] }: InviteUsersModalProps) {
   const { organization_slug } = usePage<{ organization_slug?: string }>().props;
-  const { isSuperAdmin, isClientSuperAdmin, isAdmin } = useRole();
+  const { isSuperAdmin } = useRole();
   const [inviteType, setInviteType] = useState<'user' | 'client'>('user');
 
   // System User Form State
