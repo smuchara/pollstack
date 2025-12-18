@@ -16,6 +16,7 @@ interface PollOption {
     id: number;
     text: string;
     order: number;
+    votes_count?: number;  // For ended polls
 }
 
 interface Poll {
@@ -40,6 +41,7 @@ interface Poll {
     user_vote?: {
         poll_option_id: number;
     };
+    total_votes?: number;  // For ended polls
 }
 
 interface Props {
@@ -88,6 +90,9 @@ export default function PollsIndex({ polls }: Props) {
     };
 
     const getPollBadgeColor = (poll: Poll) => {
+        if (poll.status === 'ended') {
+            return 'bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-200 dark:border-gray-800';
+        }
         if (poll.user_has_voted) {
             return 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
         }
@@ -124,7 +129,9 @@ export default function PollsIndex({ polls }: Props) {
                                                     variant="outline"
                                                     className={`capitalize border ${getPollBadgeColor(poll)}`}
                                                 >
-                                                    {poll.user_has_voted ? (
+                                                    {poll.status === 'ended' ? (
+                                                        'Poll Ended'
+                                                    ) : poll.user_has_voted ? (
                                                         <><CheckCircle2 className="h-3 w-3 mr-1" /> Voted</>
                                                     ) : (
                                                         'Active'
@@ -149,7 +156,35 @@ export default function PollsIndex({ polls }: Props) {
                                 </CardHeader>
 
                                 <CardContent className="flex-1 pb-3">
-                                    {poll.user_has_voted ? (
+                                    {poll.status === 'ended' ? (
+                                        <div className="space-y-2">
+                                            <p className="text-sm font-medium text-muted-foreground mb-3">
+                                                Results ({poll.total_votes || 0} {(poll.total_votes || 0) === 1 ? 'vote' : 'votes'}):
+                                            </p>
+                                            {poll.options.map((option) => {
+                                                const votes = option.votes_count || 0;
+                                                const percentage = poll.total_votes ? Math.round((votes / poll.total_votes) * 100) : 0;
+                                                const isUserChoice = poll.user_vote?.poll_option_id === option.id;
+
+                                                return (
+                                                    <div key={option.id} className="space-y-1">
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className={isUserChoice ? 'font-medium' : ''}>
+                                                                {option.text} {isUserChoice && <CheckCircle2 className="inline h-3 w-3 text-primary ml-1" />}
+                                                            </span>
+                                                            <span className="text-muted-foreground">{percentage}%</span>
+                                                        </div>
+                                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full transition-all ${isUserChoice ? 'bg-primary' : 'bg-primary/60'}`}
+                                                                style={{ width: `${percentage}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : poll.user_has_voted ? (
                                         <div className="space-y-2">
                                             <p className="text-sm font-medium text-muted-foreground mb-3">Your vote:</p>
                                             {poll.options.map((option) => (
@@ -217,7 +252,7 @@ export default function PollsIndex({ polls }: Props) {
                                     </div>
                                 </CardContent>
 
-                                {!poll.user_has_voted && (
+                                {!poll.user_has_voted && poll.status === 'active' && (
                                     <CardFooter className="pt-3 border-t bg-muted/10">
                                         <Button
                                             className="w-full"

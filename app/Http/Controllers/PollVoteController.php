@@ -26,6 +26,13 @@ class PollVoteController extends Controller
             ]);
         }
 
+        // Check if poll has ended (time-based)
+        if ($poll->hasEnded()) {
+            throw ValidationException::withMessages([
+                'poll' => 'This poll has ended.',
+            ]);
+        }
+
         // Check if already voted
         if ($poll->votes()->where('user_id', $user->id)->exists()) {
             throw ValidationException::withMessages([

@@ -83,4 +83,38 @@ class Poll extends Model
     {
         return $query->where('status', 'active');
     }
+
+    /**
+     * Check if the poll has ended based on end_at timestamp.
+     */
+    public function hasEnded(): bool
+    {
+        if (!$this->end_at) {
+            return false;
+        }
+
+        return now()->isAfter($this->end_at);
+    }
+
+    /**
+     * Check if the poll is currently active (status & time-based).
+     */
+    public function isActiveNow(): bool
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        // Check if poll has ended
+        if ($this->hasEnded()) {
+            return false;
+        }
+
+        // Check if poll has started
+        if ($this->start_at && now()->isBefore($this->start_at)) {
+            return false;
+        }
+
+        return true;
+    }
 }

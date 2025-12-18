@@ -17,10 +17,9 @@ class PollController extends Controller
     {
         $user = $request->user();
 
-        // Get active polls
+        // Get active and ended polls
         $query = Poll::query()
             ->with(['options', 'organization', 'creator'])
-            ->active()
             ->latest();
 
         // If user has an organization, show ONLY organization-specific polls
@@ -31,10 +30,19 @@ class PollController extends Controller
             $query->whereNull('organization_id');
         }
 
+        // Show both active and ended polls  
+        $query->whereIn('status', ['active', 'ended']);
+
         $polls = $query->paginate(12);
 
         // Check if user has already voted in each poll
         $polls->getCollection()->transform(function ($poll) use ($user) {
+            // Auto-close poll if it has ended
+            if ($poll->status === 'active' && $poll->hasEnded()) {
+                $poll->update(['status' => 'ended']);
+                $poll->refresh();
+            }
+
             $poll->user_has_voted = $poll->votes()
                 ->where('user_id', $user->id)
                 ->exists();
@@ -42,6 +50,16 @@ class PollController extends Controller
             $poll->user_vote = $poll->votes()
                 ->where('user_id', $user->id)
                 ->first();
+
+            // Load vote counts for ended polls so users can see results
+            if ($poll->status === 'ended') {
+                $poll->load([
+                    'options' => function ($query) {
+                        $query->withCount('votes');
+                    }
+                ]);
+                $poll->total_votes = $poll->votes()->count();
+            }
 
             return $poll;
         });

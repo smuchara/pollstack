@@ -22,6 +22,15 @@ class PollController extends Controller
             ->latest()
             ->paginate(10);
 
+        // Auto-close polls that have ended
+        $polls->getCollection()->transform(function ($poll) {
+            if ($poll->status === 'active' && $poll->hasEnded()) {
+                $poll->update(['status' => 'ended']);
+                $poll->refresh();
+            }
+            return $poll;
+        });
+
         return Inertia::render('admin/polls', [
             'polls' => $polls
         ]);
