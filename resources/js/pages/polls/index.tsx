@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CheckCircle2, Circle, Lock, Globe, Calendar, Users, Clock } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, Globe, Calendar, Users, Clock, PieChart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 
@@ -304,7 +304,7 @@ export default function PollsIndex({ polls }: Props) {
                                     </div>
                                 </CardContent>
 
-                                {!poll.user_has_voted && poll.status === 'active' && (
+                                {!poll.user_has_voted && poll.status === 'active' ? (
                                     <CardFooter className="pt-3 border-t bg-muted/10">
                                         <Button
                                             className="w-full"
@@ -314,7 +314,18 @@ export default function PollsIndex({ polls }: Props) {
                                             {submitting[poll.id] ? 'Submitting...' : 'Cast Vote'}
                                         </Button>
                                     </CardFooter>
-                                )}
+                                ) : poll.status === 'ended' ? (
+                                    <CardFooter className="pt-3 border-t bg-muted/10">
+                                        <Button
+                                            variant="outline"
+                                            className="w-full gap-2"
+                                            onClick={() => router.get(`/polls/${poll.id}/results`)}
+                                        >
+                                            <PieChart className="h-4 w-4" />
+                                            View Details
+                                        </Button>
+                                    </CardFooter>
+                                ) : null}
                             </Card>
                         ))}
                     </div>

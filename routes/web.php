@@ -51,10 +51,12 @@ Route::prefix('organization/{organization_slug}')
     ->group(base_path('routes/tenant.php'));
 
 // Global Settings Routes (for Super Admin who doesn't have an organization)
-require __DIR__.'/settings.php';
+require __DIR__ . '/settings.php';
 
-// Public Polls Routes (accessible to all authenticated users)
+// Public Polls Routes (accessible to all authenticated
+// Poll Voting
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/polls', [\App\Http\Controllers\PollController::class, 'index'])->name('polls.index');
     Route::post('/polls/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('polls.vote');
+    Route::get('/polls/{poll}/results', [\App\Http\Controllers\PollResultsController::class, 'show'])->name('polls.results');
 });
