@@ -22,21 +22,32 @@ class PollController extends Controller
             ->with(['options', 'organization', 'creator'])
             ->latest();
 
-        // If user has an organization, show ONLY organization-specific polls
-        if ($user->organization_id) {
+        // Show scheduled, active, and ended polls
+        // Super admins can see ALL polls
+        // Regular users see only their organization's polls or system-wide polls
+        if ($user->isSuperAdmin()) {
+            // Super admins see ALL polls (no filter)
+        } elseif ($user->organization_id) {
+            // Organization users see only their organization's polls
             $query->where('organization_id', $user->organization_id);
         } else {
-            // Global users (super admins without organization) ONLY see system-wide polls
+            // Users without organization see only system-wide polls
             $query->whereNull('organization_id');
         }
 
-        // Show both active and ended polls  
-        $query->whereIn('status', ['active', 'ended']);
+        // Show scheduled, active, and ended polls  
+        $query->whereIn('status', ['scheduled', 'active', 'ended']);
 
         $polls = $query->paginate(12);
 
         // Check if user has already voted in each poll
         $polls->getCollection()->transform(function ($poll) use ($user) {
+            // Auto-activate poll if it's scheduled and start time has arrived
+            if ($poll->status === 'scheduled' && $poll->shouldBeActivated()) {
+                $poll->update(['status' => 'active']);
+                $poll->refresh();
+            }
+
             // Auto-close poll if it has ended
             if ($poll->status === 'active' && $poll->hasEnded()) {
                 $poll->update(['status' => 'ended']);

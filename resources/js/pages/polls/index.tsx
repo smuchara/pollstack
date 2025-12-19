@@ -1,8 +1,8 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CheckCircle2, Circle, Lock, Globe, Calendar, Users } from 'lucide-react';
+import { CheckCircle2, Circle, Lock, Globe, Calendar, Users, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { format } from 'date-fns';
+import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -90,6 +90,9 @@ export default function PollsIndex({ polls }: Props) {
     };
 
     const getPollBadgeColor = (poll: Poll) => {
+        if (poll.status === 'scheduled') {
+            return 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+        }
         if (poll.status === 'ended') {
             return 'bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-200 dark:border-gray-800';
         }
@@ -129,7 +132,9 @@ export default function PollsIndex({ polls }: Props) {
                                                     variant="outline"
                                                     className={`capitalize border ${getPollBadgeColor(poll)}`}
                                                 >
-                                                    {poll.status === 'ended' ? (
+                                                    {poll.status === 'scheduled' ? (
+                                                        <><Clock className="h-3 w-3 mr-1" /> Scheduled</>
+                                                    ) : poll.status === 'ended' ? (
                                                         'Poll Ended'
                                                     ) : poll.user_has_voted ? (
                                                         <><CheckCircle2 className="h-3 w-3 mr-1" /> Voted</>
@@ -156,7 +161,17 @@ export default function PollsIndex({ polls }: Props) {
                                 </CardHeader>
 
                                 <CardContent className="flex-1 pb-3">
-                                    {poll.status === 'ended' ? (
+                                    {poll.status === 'scheduled' ? (
+                                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                                            <Clock className="h-12 w-12 text-amber-500 mb-3" />
+                                            <p className="text-sm font-medium text-muted-foreground">
+                                                Poll opens soon
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Voting will begin at the scheduled start time
+                                            </p>
+                                        </div>
+                                    ) : poll.status === 'ended' ? (
                                         <div className="space-y-2">
                                             <p className="text-sm font-medium text-muted-foreground mb-3">
                                                 Results ({poll.total_votes || 0} {(poll.total_votes || 0) === 1 ? 'vote' : 'votes'}):
@@ -231,24 +246,61 @@ export default function PollsIndex({ polls }: Props) {
                                         </div>
                                     )}
 
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-3 mt-3">
-                                        <div className="flex items-center gap-1" title="Start Date">
-                                            <Calendar className="h-3 w-3" />
-                                            {poll.start_at ? format(new Date(poll.start_at), 'MMM d, yyyy') : 'No end date'}
+                                    {/* Poll Timing Information */}
+                                    <div className="space-y-2 border-t pt-3 mt-3">
+                                        {/* Duration Badge */}
+                                        {poll.start_at && poll.end_at && (
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-medium text-muted-foreground">Duration:</span>
+                                                <div className="flex items-center gap-1 text-xs font-semibold text-foreground bg-primary/10 px-2 py-1 rounded">
+                                                    <Clock className="h-3 w-3" />
+                                                    {calculateDuration(poll.start_at, poll.end_at)}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Start Time */}
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-muted-foreground">Starts:</span>
+                                            <span className="font-medium">
+                                                {poll.start_at ? (
+                                                    <>
+                                                        {formatLocalDate(poll.start_at)}{' '}
+                                                        <span className="text-muted-foreground">at</span>{' '}
+                                                        {formatLocalTimeOnly(poll.start_at)}
+                                                    </>
+                                                ) : (
+                                                    'Not set'
+                                                )}
+                                            </span>
                                         </div>
-                                        <div>
-                                            {poll.organization ? (
+
+                                        {/* End Time */}
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-muted-foreground">Ends:</span>
+                                            <span className="font-medium">
+                                                {poll.end_at ? (
+                                                    <>
+                                                        {formatLocalDate(poll.end_at)}{' '}
+                                                        <span className="text-muted-foreground">at</span>{' '}
+                                                        {formatLocalTimeOnly(poll.end_at)}
+                                                    </>
+                                                ) : (
+                                                    'Not set'
+                                                )}
+                                            </span>
+                                        </div>
+
+                                        {/* Organization */}
+                                        {poll.organization && (
+                                            <div className="flex items-center justify-between text-xs pt-2 border-t">
+                                                <span className="text-muted-foreground">Organization:</span>
                                                 <Badge variant="secondary" className="text-[10px] h-5">
                                                     <Users className="h-3 w-3 mr-1" />
                                                     {poll.organization.name}
                                                 </Badge>
-                                            ) : (
-                                                <Badge variant="secondary" className="text-[10px] h-5">
-                                                    <Globe className="h-3 w-3 mr-1" />
-                                                    System
-                                                </Badge>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </CardContent>
 

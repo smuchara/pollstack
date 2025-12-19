@@ -64,20 +64,28 @@ export function AppSidebar() {
             },
         ];
 
-        // Add Polls link - organization admins go to admin polls, others go to public polls
+        // Add Polls link - separate voting and management for admins
         if (user?.is_admin && !user?.is_super_admin && organization_slug) {
+            // Organization admins get both voting and management (organization-scoped)
             items.push({
-                title: 'Polls',
-                href: `${tenantBaseUrl}/polls`,
+                title: 'Poll Voting',
+                href: `${tenantBaseUrl}/polls-voting`,
                 icon: BarChart3,
             });
-        } else {
+            items.push({
+                title: 'Poll Management',
+                href: `${tenantBaseUrl}/polls-management`,
+                icon: BarChart3,
+            });
+        } else if (!user?.is_super_admin) {
+            // Regular users only get voting (global)
             items.push({
                 title: 'Polls',
                 href: '/polls',
                 icon: BarChart3,
             });
         }
+        // Note: Super admins get their links added below
 
         // Add User Management for admins (tenant-aware) and super admins
         if (user?.is_admin && !user?.is_super_admin) {
@@ -91,12 +99,17 @@ export function AppSidebar() {
         // Super admin items (global, not tenant-specific)
         if (user?.is_super_admin) {
             items.push({
+                title: 'Poll Voting',
+                href: '/polls',
+                icon: BarChart3,
+            });
+            items.push({
                 title: 'User Management',
                 href: '/super-admin/users',
                 icon: Users,
             });
             items.push({
-                title: 'Manage Polls',
+                title: 'Poll Management',
                 href: '/super-admin/polls',
                 icon: BarChart3,
             });

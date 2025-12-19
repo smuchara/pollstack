@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm, usePage, router } from '@inertiajs/react';
 import { Plus, Trash2, Calendar, Lock, Globe, Clock, AlignLeft, List } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { localToUTC, utcToLocalInput } from '@/lib/date-utils';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -50,8 +51,8 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
         description: poll?.description || '',
         type: poll?.type || 'open',
         status: poll?.status || 'scheduled',
-        start_at: poll?.start_at || '',
-        end_at: poll?.end_at || '',
+        start_at: poll?.start_at ? utcToLocalInput(poll.start_at) : '',
+        end_at: poll?.end_at ? utcToLocalInput(poll.end_at) : '',
         organization_id: poll?.organization_id || '',
         options: [] as PollOption[],
     });
@@ -63,8 +64,8 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
             description: poll.description || '',
             type: poll.type,
             status: poll.status,
-            start_at: poll.start_at || '',
-            end_at: poll.end_at || '',
+            start_at: poll.start_at ? utcToLocalInput(poll.start_at) : '',
+            end_at: poll.end_at ? utcToLocalInput(poll.end_at) : '',
             organization_id: poll.organization_id || '',
             options: [],
         });
@@ -108,15 +109,15 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
             description: form.data.description || null,
             type: form.data.type,
             status: form.data.status,
-            start_at: form.data.start_at || null,
-            end_at: form.data.end_at || null,
+            start_at: form.data.start_at ? localToUTC(form.data.start_at) : null,
+            end_at: form.data.end_at ? localToUTC(form.data.end_at) : null,
             organization_id: organizationId,
             options: options,
         };
 
         // Determine base URL based on context
         const baseUrl = context === 'organization'
-            ? `/organization/${organizationSlug}/admin/polls`
+            ? `/organization/${organizationSlug}/admin/polls-management`
             : '/super-admin/polls';
 
         if (poll) {

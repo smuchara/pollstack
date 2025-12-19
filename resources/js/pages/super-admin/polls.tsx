@@ -1,7 +1,7 @@
 import { Head, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, PieChart, Calendar, Lock, Globe } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Edit, Trash2, PieChart, Calendar, Lock, Globe, Clock } from 'lucide-react';
+import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 // Components
@@ -168,12 +168,54 @@ export default function PollsIndex({ polls }: Props) {
                                             )}
                                         </div>
 
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-3">
-                                            <div className="flex items-center gap-1" title="Start Date">
-                                                <Calendar className="h-3 w-3" />
-                                                {poll.start_at ? format(new Date(poll.start_at), 'MMM d, yyyy') : 'No start date'}
+                                        {/* Poll Timing Information */}
+                                        <div className="space-y-2 border-t pt-3">
+                                            {/* Duration Badge */}
+                                            {poll.start_at && poll.end_at && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-medium text-muted-foreground">Duration:</span>
+                                                    <div className="flex items-center gap-1 text-xs font-semibold text-foreground bg-primary/10 px-2 py-1 rounded">
+                                                        <Clock className="h-3 w-3" />
+                                                        {calculateDuration(poll.start_at, poll.end_at)}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Start Time */}
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-muted-foreground">Starts:</span>
+                                                <span className="font-medium">
+                                                    {poll.start_at ? (
+                                                        <>
+                                                            {formatLocalDate(poll.start_at)}{' '}
+                                                            <span className="text-muted-foreground">at</span>{' '}
+                                                            {formatLocalTimeOnly(poll.start_at)}
+                                                        </>
+                                                    ) : (
+                                                        'Not set'
+                                                    )}
+                                                </span>
                                             </div>
-                                            <div>
+
+                                            {/* End Time */}
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-muted-foreground">Ends:</span>
+                                                <span className="font-medium">
+                                                    {poll.end_at ? (
+                                                        <>
+                                                            {formatLocalDate(poll.end_at)}{' '}
+                                                            <span className="text-muted-foreground">at</span>{' '}
+                                                            {formatLocalTimeOnly(poll.end_at)}
+                                                        </>
+                                                    ) : (
+                                                        'Not set'
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            {/* Organization */}
+                                            <div className="flex items-center justify-between text-xs pt-2 border-t">
+                                                <span className="text-muted-foreground">Organization:</span>
                                                 {poll.organization ? (
                                                     <Badge variant="secondary" className="text-[10px] h-5">
                                                         {poll.organization.name}

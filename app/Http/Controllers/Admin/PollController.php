@@ -22,8 +22,15 @@ class PollController extends Controller
             ->latest()
             ->paginate(10);
 
-        // Auto-close polls that have ended
+        // Auto-activate and auto-close polls based on time
         $polls->getCollection()->transform(function ($poll) {
+            // Auto-activate poll if it's scheduled and start time has arrived
+            if ($poll->status === 'scheduled' && $poll->shouldBeActivated()) {
+                $poll->update(['status' => 'active']);
+                $poll->refresh();
+            }
+
+            // Auto-close poll if it has ended
             if ($poll->status === 'active' && $poll->hasEnded()) {
                 $poll->update(['status' => 'ended']);
                 $poll->refresh();

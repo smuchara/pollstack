@@ -97,6 +97,22 @@ class Poll extends Model
     }
 
     /**
+     * Check if the poll should be activated (scheduled -> active).
+     */
+    public function shouldBeActivated(): bool
+    {
+        if ($this->status !== 'scheduled') {
+            return false;
+        }
+
+        if (!$this->start_at) {
+            return false;
+        }
+
+        return now()->isAfter($this->start_at) || now()->equalTo($this->start_at);
+    }
+
+    /**
      * Check if the poll is currently active (status & time-based).
      */
     public function isActiveNow(): bool

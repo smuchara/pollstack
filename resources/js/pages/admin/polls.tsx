@@ -1,7 +1,7 @@
 import { Head, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, PieChart, Calendar, Lock, Globe } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Edit, Trash2, PieChart, Calendar, Lock, Globe, Clock } from 'lucide-react';
+import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 // Components
@@ -67,7 +67,7 @@ export default function PollsIndex({ polls }: Props) {
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: `/organization/${orgSlug}/admin/dashboard` },
-        { title: 'Polls', href: `/organization/${orgSlug}/admin/polls` },
+        { title: 'Polls', href: `/organization/${orgSlug}/admin/polls-management` },
     ];
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -87,7 +87,7 @@ export default function PollsIndex({ polls }: Props) {
     const handleDelete = () => {
         if (!pollToDelete) return;
 
-        router.delete(`/organization/${orgSlug}/admin/polls/${pollToDelete.id}`, {
+        router.delete(`/organization/${orgSlug}/admin/polls-management/${pollToDelete.id}`, {
             onSuccess: () => {
                 toast.success('Poll deleted successfully');
                 setPollToDelete(null);
@@ -172,16 +172,55 @@ export default function PollsIndex({ polls }: Props) {
                                             )}
                                         </div>
 
-                                        <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-3">
-                                            <div className="flex items-center gap-1" title="Start Date">
-                                                <Calendar className="h-3 w-3" />
-                                                {poll.start_at ? format(new Date(poll.start_at), 'MMM d, yyyy') : 'No start date'}
+                                        {/* Poll Timing Information */}
+                                        <div className="space-y-2 border-t pt-3">
+                                            {/* Duration Badge */}
+                                            {poll.start_at && poll.end_at && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-medium text-muted-foreground">Duration:</span>
+                                                    <div className="flex items-center gap-1 text-xs font-semibold text-foreground bg-primary/10 px-2 py-1 rounded">
+                                                        <Clock className="h-3 w-3" />
+                                                        {calculateDuration(poll.start_at, poll.end_at)}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Start Time */}
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-muted-foreground">Starts:</span>
+                                                <span className="font-medium">
+                                                    {poll.start_at ? (
+                                                        <>
+                                                            {formatLocalDate(poll.start_at)}{' '}
+                                                            <span className="text-muted-foreground">at</span>{' '}
+                                                            {formatLocalTimeOnly(poll.start_at)}
+                                                        </>
+                                                    ) : (
+                                                        'Not set'
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            {/* End Time */}
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-muted-foreground">Ends:</span>
+                                                <span className="font-medium">
+                                                    {poll.end_at ? (
+                                                        <>
+                                                            {formatLocalDate(poll.end_at)}{' '}
+                                                            <span className="text-muted-foreground">at</span>{' '}
+                                                            {formatLocalTimeOnly(poll.end_at)}
+                                                        </>
+                                                    ) : (
+                                                        'Not set'
+                                                    )}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-3 border-t bg-muted/10 flex justify-between gap-2">
-                                    <Button variant="ghost" size="sm" className="flex-1 gap-2" onClick={() => router.get(`/organization/${orgSlug}/admin/polls/${poll.id}/results`)}>
+                                    <Button variant="ghost" size="sm" className="flex-1 gap-2" onClick={() => router.get(`/organization/${orgSlug}/admin/polls-management/${poll.id}/results`)}>
                                         <PieChart className="h-3.5 w-3.5" />
                                         Results
                                     </Button>
