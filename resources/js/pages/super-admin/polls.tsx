@@ -1,6 +1,6 @@
 import { Head, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, PieChart, Calendar, Lock, Globe, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Lock, Globe, Clock } from 'lucide-react';
 import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
@@ -138,9 +138,9 @@ export default function PollsIndex({ polls }: Props) {
                                                     {poll.status}
                                                 </Badge>
                                                 {poll.type === 'closed' ? (
-                                                    <Lock className="h-3 w-3 text-muted-foreground" title="Closed Ballot" />
+                                                    <Lock className="h-3 w-3 text-muted-foreground" aria-label="Closed Ballot" />
                                                 ) : (
-                                                    <Globe className="h-3 w-3 text-muted-foreground" title="Open Ballot" />
+                                                    <Globe className="h-3 w-3 text-muted-foreground" aria-label="Open Ballot" />
                                                 )}
                                             </div>
                                             <CardTitle className="text-lg leading-tight line-clamp-2" title={poll.question}>
@@ -228,12 +228,8 @@ export default function PollsIndex({ polls }: Props) {
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-3 border-t bg-muted/10 flex justify-between gap-2">
-                                    <Button variant="ghost" size="sm" className="flex-1 gap-2" onClick={() => router.get(`/super-admin/polls/${poll.id}/results`)}>
-                                        <PieChart className="h-3.5 w-3.5" />
-                                        Results
-                                    </Button>
                                     {poll.status === 'scheduled' && (
-                                        <Button variant="ghost" size="sm" className="flex-1 gap-2 border-l border-r rounded-none" onClick={() => handleEdit(poll)}>
+                                        <Button variant="ghost" size="sm" className="flex-1 gap-2" onClick={() => handleEdit(poll)}>
                                             <Edit className="h-3.5 w-3.5" />
                                             Edit
                                         </Button>
@@ -254,7 +250,7 @@ export default function PollsIndex({ polls }: Props) {
 
                     {polls.data.length === 0 && (
                         <div className="text-center py-12 rounded-lg border border-dashed bg-muted/20">
-                            <PieChart className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                            <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
                             <h3 className="text-lg font-medium">No polls found</h3>
                             <p className="text-muted-foreground text-sm mt-1">
                                 Create your first poll to get started.
