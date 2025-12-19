@@ -23,6 +23,6 @@ class DashboardTest extends TestCase
         $response = $this->get(route('dashboard'));
 
         $response->assertSuccessful();
-        $response->assertInertia(fn($page) => $page->component('dashboard'));
+        $response->assertInertia(fn ($page) => $page->component('dashboard'));
     }
 }

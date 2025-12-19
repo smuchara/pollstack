@@ -159,7 +159,7 @@ test('organization admin can view poll results for their organization', function
 
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->component('admin/polls/results')
             ->has('poll')
             ->where('poll.id', $poll->id)
@@ -182,7 +182,7 @@ test('organization admin can list all polls in their organization', function () 
 
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->component('admin/polls')
             ->has('polls.data', 3) // Should only see 3 polls from their org
     );

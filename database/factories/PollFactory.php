@@ -17,7 +17,7 @@ class PollFactory extends Factory
     public function definition(): array
     {
         return [
-            'question' => $this->faker->sentence() . '?',
+            'question' => $this->faker->sentence().'?',
             'description' => $this->faker->optional()->paragraph(),
             'type' => $this->faker->randomElement(['open', 'closed']),
             'status' => 'active',
@@ -36,7 +36,7 @@ class PollFactory extends Factory
         return $this->afterCreating(function (\App\Models\Poll $poll) use ($count) {
             for ($i = 0; $i < $count; $i++) {
                 $poll->options()->create([
-                    'text' => $this->faker->sentence(),
+                    'text' => fake()->sentence(),
                     'order' => $i,
                 ]);
             }

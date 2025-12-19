@@ -3,12 +3,9 @@
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PermissionGroupController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\UserPermissionController;
-use App\Models\User;
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-
+use App\Http\Controllers\SuperAdmin\DashboardController as SADashboardController;
+use App\Http\Controllers\SuperAdmin\PollController;
+use App\Http\Controllers\SuperAdmin\UserController as SAUserController;
 /*
 |--------------------------------------------------------------------------
 | Admin Routes
@@ -31,10 +28,10 @@ use Inertia\Inertia;
 |
 */
 
-use App\Http\Controllers\SuperAdmin\DashboardController as SADashboardController;
-use App\Http\Controllers\SuperAdmin\PollController;
-use App\Http\Controllers\SuperAdmin\UserController as SAUserController;
 use App\Http\Controllers\SuperAdmin\UserPermissionController as SAUserPermissionController;
+use App\Models\User;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------

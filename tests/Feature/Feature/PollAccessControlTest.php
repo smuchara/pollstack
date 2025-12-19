@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Role;
 use App\Models\Organization;
 use App\Models\Poll;
 use App\Models\User;
@@ -23,7 +22,7 @@ test('system polls are visible to super admins without organization', function (
 
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->component('polls/index')
             ->has('polls.data', 1)
             ->where('polls.data.0.id', $systemPoll->id)
@@ -44,7 +43,7 @@ test('system polls are not visible to organization members', function () {
 
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->component('polls/index')
             ->has('polls.data', 0) // Should not see any system polls
     );
@@ -73,7 +72,7 @@ test('organization polls are visible only to members of that organization', func
     $response = $this->actingAs($user1)->get('/polls');
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->has('polls.data', 1)
             ->where('polls.data.0.id', $org1Poll->id)
     );
@@ -82,7 +81,7 @@ test('organization polls are visible only to members of that organization', func
     $response = $this->actingAs($user2)->get('/polls');
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->has('polls.data', 1)
             ->where('polls.data.0.id', $org2Poll->id)
     );
@@ -101,7 +100,7 @@ test('organization admin can see organization polls', function () {
 
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->has('polls.data', 1)
             ->where('polls.data.0.id', $orgPoll->id)
     );
@@ -121,7 +120,7 @@ test('super admins without organization do not see organization polls', function
 
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->has('polls.data', 0) // Should not see organization polls
     );
 });
@@ -145,7 +144,7 @@ test('inactive polls are not visible in public poll list', function () {
 
     $response->assertStatus(200);
     $response->assertInertia(
-        fn($page) => $page
+        fn ($page) => $page
             ->has('polls.data', 1) // Only active poll
             ->where('polls.data.0.id', $activePoll->id)
     );

@@ -35,7 +35,7 @@ class PollController extends Controller
             $query->whereNull('organization_id');
         }
 
-        // Show scheduled, active, and ended polls  
+        // Show scheduled, active, and ended polls
         $query->whereIn('status', ['scheduled', 'active', 'ended']);
 
         $polls = $query->paginate(12);
@@ -67,7 +67,7 @@ class PollController extends Controller
                 $poll->load([
                     'options' => function ($query) {
                         $query->withCount('votes');
-                    }
+                    },
                 ]);
                 $poll->total_votes = $poll->votes()->count();
             }

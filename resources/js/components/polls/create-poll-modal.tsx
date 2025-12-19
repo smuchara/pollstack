@@ -50,7 +50,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
         question: poll?.question || '',
         description: poll?.description || '',
         type: poll?.type || 'open',
-        status: poll?.status || 'scheduled',
+        status: 'active', // Backend will determine actual status based on timing
         start_at: poll?.start_at ? utcToLocalInput(poll.start_at) : '',
         end_at: poll?.end_at ? utcToLocalInput(poll.end_at) : '',
         organization_id: poll?.organization_id || '',
@@ -63,7 +63,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
             question: poll.question,
             description: poll.description || '',
             type: poll.type,
-            status: poll.status,
+            status: 'active', // Backend determines actual status
             start_at: poll.start_at ? utcToLocalInput(poll.start_at) : '',
             end_at: poll.end_at ? utcToLocalInput(poll.end_at) : '',
             organization_id: poll.organization_id || '',
@@ -192,7 +192,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
                             <div className="space-y-2">
                                 <Label htmlFor="type">Ballot Type</Label>
                                 <Select
@@ -215,23 +215,6 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
                                                 <span>Closed Ballot</span>
                                             </div>
                                         </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="status">Initial Status</Label>
-                                <Select
-                                    value={form.data.status}
-                                    onValueChange={(val) => form.setData('status', val)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                                        <SelectItem value="active">Active</SelectItem>
-                                        <SelectItem value="ended">Ended</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

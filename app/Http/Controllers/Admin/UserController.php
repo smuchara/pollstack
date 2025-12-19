@@ -62,7 +62,7 @@ class UserController extends Controller
             ->where('expires_at', '>', now())
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn($inv) => [
+            ->map(fn ($inv) => [
                 'id' => $inv->id,
                 'name' => $inv->name,
                 'email' => $inv->email,
@@ -116,4 +116,3 @@ class UserController extends Controller
         ];
     }
 }
-

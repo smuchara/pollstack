@@ -15,6 +15,7 @@ Route::get('/dashboard', function () {
     if ($user->isAdmin()) {
         return redirect()->route('tenant.admin.dashboard', app('organization')->slug);
     }
+
     return Inertia::render('user-dashboard');
 })->name('tenant.dashboard');
 
@@ -24,6 +25,7 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::get('dashboard', function () {
         $userController = new UserController;
         $stats = $userController->stats();
+
         return Inertia::render('dashboard', ['stats' => $stats]);
     })->name('dashboard');
 
@@ -85,5 +87,3 @@ Route::get('settings/appearance', function () {
 
 Route::get('settings/two-factor', [TwoFactorAuthenticationController::class, 'show'])
     ->name('tenant.two-factor.show');
-
-

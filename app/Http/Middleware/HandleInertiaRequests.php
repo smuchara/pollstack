@@ -65,7 +65,7 @@ class HandleInertiaRequests extends Middleware
             'organization_slug' => app()->bound('organization')
                 ? app('organization')->slug
                 : $request->route('organization_slug'),
-            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

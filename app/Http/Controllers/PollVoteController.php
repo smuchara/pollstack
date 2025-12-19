@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Poll;
 use App\Models\Vote;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class PollVoteController extends Controller
@@ -30,6 +28,13 @@ class PollVoteController extends Controller
         if ($poll->hasEnded()) {
             throw ValidationException::withMessages([
                 'poll' => 'This poll has ended.',
+            ]);
+        }
+
+        // Check if user is eligible to vote on this poll
+        if (! $poll->canBeVotedOnBy($user)) {
+            throw ValidationException::withMessages([
+                'poll' => 'You are not eligible to vote in this poll.',
             ]);
         }
 

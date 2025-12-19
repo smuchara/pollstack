@@ -4,10 +4,9 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Poll;
-use App\Models\Organization;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class PollController extends Controller
 {
@@ -33,11 +32,12 @@ class PollController extends Controller
                 $poll->update(['status' => 'ended']);
                 $poll->refresh();
             }
+
             return $poll;
         });
 
         return Inertia::render('super-admin/polls', [
-            'polls' => $polls
+            'polls' => $polls,
         ]);
     }
 
@@ -58,12 +58,15 @@ class PollController extends Controller
             'options.*.text' => 'required|string|max:255',
         ]);
 
-        DB::transaction(function () use ($validated, $request) {
+        // Determine actual status based on timing
+        $status = $this->determineStatus($validated['status'], $validated['start_at'] ?? null, $validated['end_at'] ?? null);
+
+        DB::transaction(function () use ($validated, $request, $status) {
             $poll = Poll::create([
                 'question' => $validated['question'],
                 'description' => $validated['description'],
                 'type' => $validated['type'],
-                'status' => $validated['status'],
+                'status' => $status,
                 'start_at' => $validated['start_at'],
                 'end_at' => $validated['end_at'],
                 'organization_id' => $validated['organization_id'],
@@ -99,12 +102,15 @@ class PollController extends Controller
             'options.*.text' => 'required|string|max:255',
         ]);
 
-        DB::transaction(function () use ($validated, $poll) {
+        // Determine actual status based on timing
+        $status = $this->determineStatus($validated['status'], $validated['start_at'] ?? null, $validated['end_at'] ?? null);
+
+        DB::transaction(function () use ($validated, $poll, $status) {
             $poll->update([
                 'question' => $validated['question'],
                 'description' => $validated['description'],
                 'type' => $validated['type'],
-                'status' => $validated['status'],
+                'status' => $status,
                 'start_at' => $validated['start_at'],
                 'end_at' => $validated['end_at'],
                 'organization_id' => $validated['organization_id'],
@@ -145,6 +151,7 @@ class PollController extends Controller
     public function destroy(Poll $poll)
     {
         $poll->delete();
+
         return redirect()->back()->with('success', 'Poll deleted successfully.');
     }
 
@@ -153,11 +160,37 @@ class PollController extends Controller
         $poll->load([
             'options' => function ($query) {
                 $query->withCount('votes');
-            }
+            },
         ]);
 
         return Inertia::render('super-admin/polls/results', [
             'poll' => $poll,
         ]);
+    }
+
+    /**
+     * Determine the correct status based on start and end times.
+     */
+    private function determineStatus(string $requestedStatus, ?string $startAt, ?string $endAt): string
+    {
+        $now = now();
+
+        // If end time is set and has passed, status must be 'ended'
+        if ($endAt && \Carbon\Carbon::parse($endAt)->isPast()) {
+            return 'ended';
+        }
+
+        // If start time is set and in the future, status must be 'scheduled'
+        if ($startAt && \Carbon\Carbon::parse($startAt)->isFuture()) {
+            return 'scheduled';
+        }
+
+        // Otherwise, use the requested status but prevent invalid states
+        // If start time has passed but poll is marked as scheduled, activate it
+        if ($requestedStatus === 'scheduled' && $startAt && \Carbon\Carbon::parse($startAt)->isPast()) {
+            return 'active';
+        }
+
+        return $requestedStatus;
     }
 }

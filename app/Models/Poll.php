@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Poll extends Model
 {
@@ -89,7 +89,7 @@ class Poll extends Model
      */
     public function hasEnded(): bool
     {
-        if (!$this->end_at) {
+        if (! $this->end_at) {
             return false;
         }
 
@@ -105,7 +105,7 @@ class Poll extends Model
             return false;
         }
 
-        if (!$this->start_at) {
+        if (! $this->start_at) {
             return false;
         }
 
@@ -132,5 +132,25 @@ class Poll extends Model
         }
 
         return true;
+    }
+
+    /**
+     * Check if the poll can be voted on by the given user.
+     * System polls (organization_id = null) can only be voted on by users without an organization.
+     * Organization polls can only be voted on by users in that specific organization.
+     */
+    public function canBeVotedOnBy(User $user): bool
+    {
+        // System poll (no organization)
+        if ($this->organization_id === null) {
+            // Only users without organization can vote on system polls
+            // This prevents organization users AND super admins with organizations from voting
+            return $user->organization_id === null;
+        }
+
+        // Organization poll
+        // Only users from the same organization can vote
+        // This prevents super admins (who have no organization) from voting on org polls
+        return $user->organization_id === $this->organization_id;
     }
 }

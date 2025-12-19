@@ -56,7 +56,6 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-
     /**
      * Check if the user is a super admin.
      */
@@ -112,7 +111,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         // Demote admin to user if they have no permissions
         // Note: We only demote 'admin', not 'client_super_admin' (handled by guard above)
-        if ($this->role === Role::ADMIN && !$hasAnyPermissions) {
+        if ($this->role === Role::ADMIN && ! $hasAnyPermissions) {
             $this->update(['role' => Role::USER]);
         }
     }
@@ -245,7 +244,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function hasAllPermissions(array $permissions): bool
     {
         foreach ($permissions as $permission) {
-            if (!$this->hasPermission($permission)) {
+            if (! $this->hasPermission($permission)) {
                 return false;
             }
         }
@@ -285,7 +284,6 @@ class User extends Authenticatable implements MustVerifyEmail
         ]);
         $this->syncRoleWithPermissions();
     }
-
 
     /**
      * Get the organization that owns the user.

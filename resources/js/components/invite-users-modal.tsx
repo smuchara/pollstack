@@ -44,7 +44,7 @@ export function InviteUsersModal({ isOpen, onClose, permissionGroups = [] }: Inv
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Build base URL for tenant context
-  const baseUrl = isSuperAdmin
+  const baseUrl = isSuperAdmin()
     ? '/super-admin'
     : (organization_slug ? `/organization/${organization_slug}/admin` : '/admin');
 

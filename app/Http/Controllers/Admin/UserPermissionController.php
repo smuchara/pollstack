@@ -12,7 +12,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-
 class UserPermissionController extends Controller
 {
     /**
@@ -26,6 +25,7 @@ class UserPermissionController extends Controller
         } else {
             $org = auth()->user()?->organization_id;
         }
+
         return $org;
     }
 
@@ -53,12 +53,12 @@ class UserPermissionController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
             ],
-            'permission_groups' => $user->permissionGroups->map(fn($g) => [
+            'permission_groups' => $user->permissionGroups->map(fn ($g) => [
                 'id' => $g->id,
                 'name' => $g->name,
                 'label' => $g->label,
             ]),
-            'direct_permissions' => $user->directPermissions->map(fn($p) => [
+            'direct_permissions' => $user->directPermissions->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
                 'label' => $p->label,
@@ -83,7 +83,7 @@ class UserPermissionController extends Controller
                 'description' => $group->description,
                 'is_system' => $group->is_system,
                 'permissions_count' => $group->permissions->count(),
-                'permissions' => $group->permissions->map(fn($p) => [
+                'permissions' => $group->permissions->map(fn ($p) => [
                     'id' => $p->id,
                     'label' => $p->label,
                 ]),
@@ -103,7 +103,7 @@ class UserPermissionController extends Controller
             'permission_groups' => $permissionGroups,
             'permissions' => $permissions,
             'user_permission_groups' => $user->permissionGroups->pluck('id'),
-            'user_direct_permissions' => $user->directPermissions->map(fn($p) => [
+            'user_direct_permissions' => $user->directPermissions->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
                 'label' => $p->label,
