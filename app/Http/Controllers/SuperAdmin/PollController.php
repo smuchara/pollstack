@@ -89,6 +89,11 @@ class PollController extends Controller
      */
     public function update(Request $request, Poll $poll)
     {
+        // Prevent editing polls that are active or have ended to maintain credibility
+        if (in_array($poll->status, ['active', 'ended'])) {
+            return back()->with('error', 'Cannot edit polls that are active or have ended. This ensures voting integrity and prevents data manipulation.');
+        }
+
         $validated = $request->validate([
             'question' => 'required|string|max:255',
             'description' => 'nullable|string',

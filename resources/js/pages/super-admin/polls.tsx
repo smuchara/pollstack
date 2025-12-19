@@ -232,10 +232,12 @@ export default function PollsIndex({ polls }: Props) {
                                         <PieChart className="h-3.5 w-3.5" />
                                         Results
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="flex-1 gap-2 border-l border-r rounded-none" onClick={() => handleEdit(poll)}>
-                                        <Edit className="h-3.5 w-3.5" />
-                                        Edit
-                                    </Button>
+                                    {poll.status === 'scheduled' && (
+                                        <Button variant="ghost" size="sm" className="flex-1 gap-2 border-l border-r rounded-none" onClick={() => handleEdit(poll)}>
+                                            <Edit className="h-3.5 w-3.5" />
+                                            Edit
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="ghost"
                                         size="sm"

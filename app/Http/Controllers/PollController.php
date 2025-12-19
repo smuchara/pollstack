@@ -19,7 +19,13 @@ class PollController extends Controller
 
         // Get active and ended polls
         $query = Poll::query()
-            ->with(['options', 'organization', 'creator'])
+            ->with([
+                'options' => function ($query) {
+                    $query->withCount('votes');
+                },
+                'organization',
+                'creator'
+            ])
             ->latest();
 
         // Show scheduled, active, and ended polls
@@ -62,13 +68,8 @@ class PollController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            // Load vote counts for ended polls so users can see results
+            // Add total votes count for ended polls
             if ($poll->status === 'ended') {
-                $poll->load([
-                    'options' => function ($query) {
-                        $query->withCount('votes');
-                    },
-                ]);
                 $poll->total_votes = $poll->votes()->count();
             }
 
