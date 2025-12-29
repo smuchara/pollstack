@@ -12,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 use Spatie\SimpleExcel\SimpleExcelReader;
 
 class ProcessBulkInvitation implements ShouldQueue
@@ -61,6 +62,7 @@ class ProcessBulkInvitation implements ShouldQueue
         });
 
         if (empty($validEmails)) {
+            $this->markAsCompleted(0);
             $this->cleanup();
             return;
         }
@@ -80,6 +82,7 @@ class ProcessBulkInvitation implements ShouldQueue
         $emailsToInvite = array_diff($validEmails, $existingUsers, $existingInvites);
 
         if (empty($emailsToInvite)) {
+            $this->markAsCompleted(0);
             $this->cleanup();
             return;
         }
@@ -88,7 +91,18 @@ class ProcessBulkInvitation implements ShouldQueue
         // We do this in chunks to avoid locking the DB for too long if list is huge
         // But for 1000, one transaction is okay.
 
-        DB::transaction(function () use ($emailsToInvite) {
+        // Initialize progress
+        $total = count($emailsToInvite);
+        $processed = 0;
+        $cacheKey = "bulk_invite_progress_{$this->invitedBy}";
+
+        Cache::put($cacheKey, [
+            'total' => $total,
+            'processed' => 0,
+            'status' => 'processing'
+        ], 3600);
+
+        DB::transaction(function () use ($emailsToInvite, $cacheKey, $total, &$processed) {
             foreach ($emailsToInvite as $email) {
                 try {
                     $invitation = UserInvitation::create([
@@ -105,10 +119,32 @@ class ProcessBulkInvitation implements ShouldQueue
                 } catch (\Exception $e) {
                     \Log::error("Failed to invite {$email}: " . $e->getMessage());
                 }
+
+                $processed++;
+                // Update progress every 5 items or if it's the last one
+                if ($processed % 5 === 0 || $processed === $total) {
+                    Cache::put($cacheKey, [
+                        'total' => $total,
+                        'processed' => $processed,
+                        'status' => 'processing'
+                    ], 3600);
+                }
             }
         });
 
+        $this->markAsCompleted($total);
+
         $this->cleanup();
+    }
+
+    protected function markAsCompleted(int $total): void
+    {
+        $cacheKey = "bulk_invite_progress_{$this->invitedBy}";
+        Cache::store('file')->put($cacheKey, [
+            'total' => $total,
+            'processed' => $total,
+            'status' => 'completed'
+        ], 300);
     }
 
     protected function cleanup(): void

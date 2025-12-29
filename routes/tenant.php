@@ -37,6 +37,7 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::delete('invitations/{id}', [InvitationController::class, 'cancel'])->name('invitations.cancel');
     Route::post('invitations/{id}/resend', [InvitationController::class, 'resend'])->name('invitations.resend');
     Route::get('invitations/bulk/template', [InvitationController::class, 'downloadTemplate'])->name('invitations.bulk.template');
+    Route::get('invitations/bulk/progress', [InvitationController::class, 'progress'])->name('invitations.bulk.progress');
     Route::post('invitations/bulk', [InvitationController::class, 'bulkInvite'])->name('invitations.bulk');
 
     // Permissions
