@@ -252,7 +252,26 @@ export default function PollsIndex({ activePolls, endedPolls, counts }: Props) {
                 <Button
                     variant="outline"
                     className="w-full gap-2"
-                    onClick={() => router.get(`/polls/${poll.id}/results`)}
+                    onClick={() => {
+                        // Check if we are in an organization context
+                        const currentPath = window.location.pathname;
+                        const isOrgContext = currentPath.includes('/organization/');
+
+                        if (isOrgContext && poll.organization) {
+                            // Extract org slug from current path or poll data
+                            // Structure: /organization/{slug}/admin/polls-voting
+                            const pathParts = currentPath.split('/');
+                            const orgIndex = pathParts.indexOf('organization');
+                            if (orgIndex !== -1 && pathParts[orgIndex + 1]) {
+                                const slug = pathParts[orgIndex + 1];
+                                router.get(`/organization/${slug}/admin/polls-voting/${poll.id}/results`);
+                                return;
+                            }
+                        }
+
+                        // Fallback to global route
+                        router.get(`/polls/${poll.id}/results`);
+                    }}
                 >
                     <PieChart className="h-4 w-4" />
                     View Results
