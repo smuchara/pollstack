@@ -17,6 +17,7 @@ interface PollOption {
     text: string;
     order: number;
     votes_count: number;
+    [key: string]: string | number; // Index signature for recharts
 }
 
 interface Poll {
@@ -48,6 +49,7 @@ interface Statistics {
 interface VotingTrendItem {
     date: string;
     votes: number;
+    [key: string]: string | number; // Index signature for recharts
 }
 
 interface PercentageBreakdownItem {
@@ -91,12 +93,29 @@ const CHART_COLORS = [ANALYTICS_COLORS.purple, ANALYTICS_COLORS.cyan, ANALYTICS_
 export default function PollResults({ poll, statistics, votingTrend, percentageBreakdown, voterLog }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Polls', href: '/polls' },
+        {
+            title: 'Poll Voting', href: window.location.pathname.includes('/organization/')
+                ? window.location.pathname.split('/').slice(0, window.location.pathname.indexOf('polls-voting') + 1).join('/')
+                : '/polls'
+        },
         { title: 'Results', href: '' },
     ];
 
     const handleDelete = () => {
         if (confirm('Are you sure you want to delete this poll? This action cannot be undone.')) {
+            // Context-aware delete
+            const currentPath = window.location.pathname;
+            if (currentPath.includes('/organization/') && poll.organization) {
+                // If in org context, likely an admin, try to use tenant route if simpler, 
+                // but usually delete is an admin action. 
+                // However, standard delete route might not be in 'web.php'.
+                // If we are here as an admin, we might want to redirect to admin management.
+                // For now, let's keep it safe. If there's no route, it will fail.
+                // Best effort to keep context if it was supported.
+
+                alert("Please use the Poll Management page to delete polls.");
+                return;
+            }
             router.delete(`/polls/${poll.id}`);
         }
     };

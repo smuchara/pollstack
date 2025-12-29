@@ -75,6 +75,7 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     // Polls voting - organization scoped
     Route::get('polls-voting', [\App\Http\Controllers\PollController::class, 'index'])->name('polls-voting.index');
     Route::post('polls-voting/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('polls-voting.vote');
+    Route::get('polls-voting/{poll}/results', [\App\Http\Controllers\PollResultsController::class, 'show'])->name('polls-voting.results');
 });
 
 // User Profile Settings (within tenant context) - prefixed to avoid conflicts
