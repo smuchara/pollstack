@@ -9,7 +9,8 @@ use Inertia\Inertia;
 class PollController extends Controller
 {
     /**
-     * Display a listing of active polls for the authenticated user.
+     * Display a listing of active and ended polls for the authenticated user.
+     * Returns separate datasets for active and ended polls with counts.
      * System polls are ONLY visible to users without an organization (for internal testing).
      * Organization users only see polls created within their organization.
      */
@@ -17,39 +18,43 @@ class PollController extends Controller
     {
         $user = $request->user();
 
-        // Get active and ended polls
-        $query = Poll::query()
-            ->with([
-                'options' => function ($query) {
-                    $query->withCount('votes');
-                },
-                'organization',
-                'creator'
-            ])
-            ->latest();
+        // Base query for all polls with relationships
+        $baseQuery = function () use ($user) {
+            return Poll::query()
+                ->with([
+                    'options' => function ($query) {
+                        $query->withCount('votes');
+                    },
+                    'organization',
+                    'creator',
+                ])
+                ->when($user->isSuperAdmin() && ! $user->organization_id, function ($query) {
+                    // Super admins without organization see only system-wide polls
+                    $query->whereNull('organization_id');
+                })
+                ->when($user->organization_id, function ($query) use ($user) {
+                    // Organization users (including org admins) see only their organization's polls
+                    $query->where('organization_id', $user->organization_id);
+                })
+                ->when(! $user->isSuperAdmin() && ! $user->organization_id, function ($query) {
+                    // Users without organization see only system-wide polls
+                    $query->whereNull('organization_id');
+                })
+                ->latest();
+        };
 
-        // Filter polls based on user type and status
-        // Super admins WITHOUT organization see only system polls (organization_id = null)
-        // Super admins WITH organization see their organization's polls
-        // Regular users see only their organization's polls or system-wide polls
-        if ($user->isSuperAdmin() && !$user->organization_id) {
-            // Super admins without organization see only system-wide polls
-            $query->whereNull('organization_id');
-        } elseif ($user->organization_id) {
-            // Organization users (including org admins) see only their organization's polls
-            $query->where('organization_id', $user->organization_id);
-        } else {
-            // Users without organization see only system-wide polls
-            $query->whereNull('organization_id');
-        }
+        // Get active polls
+        $activePolls = $baseQuery()
+            ->where('status', 'active')
+            ->get();
 
-        // Only show active polls (exclude scheduled, ended, and archived)
-        $query->where('status', 'active');
+        // Get ended polls
+        $endedPolls = $baseQuery()
+            ->where('status', 'ended')
+            ->get();
 
-        $polls = $query->paginate(12);
-
-        // Check if user has already voted in each poll
-        $polls->getCollection()->transform(function ($poll) use ($user) {
+        // Transform polls to add user-specific data
+        $transformPoll = function ($poll) use ($user) {
             // Auto-activate poll if it's scheduled and start time has arrived
             if ($poll->status === 'scheduled' && $poll->shouldBeActivated()) {
                 $poll->update(['status' => 'active']);
@@ -70,16 +75,23 @@ class PollController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
-            // Add total votes count for ended polls
-            if ($poll->status === 'ended') {
-                $poll->total_votes = $poll->votes()->count();
-            }
+            // Add total votes count
+            $poll->total_votes = $poll->votes()->count();
 
             return $poll;
-        });
+        };
+
+        // Transform both collections
+        $activePolls = $activePolls->map($transformPoll);
+        $endedPolls = $endedPolls->map($transformPoll);
 
         return Inertia::render('polls/index', [
-            'polls' => $polls,
+            'activePolls' => $activePolls,
+            'endedPolls' => $endedPolls,
+            'counts' => [
+                'active' => $activePolls->count(),
+                'ended' => $endedPolls->count(),
+            ],
         ]);
     }
 }
