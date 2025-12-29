@@ -19,6 +19,10 @@ class DashboardTest extends TestCase
     {
         $this->actingAs($user = User::factory()->create());
 
-        $this->get(route('dashboard'))->assertRedirect();
+        // Global users (without organization) should see the dashboard directly
+        $response = $this->get(route('dashboard'));
+
+        $response->assertSuccessful();
+        $response->assertInertia(fn ($page) => $page->component('dashboard'));
     }
 }

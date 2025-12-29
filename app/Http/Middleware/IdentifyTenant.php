@@ -17,7 +17,7 @@ class IdentifyTenant
     {
         $slug = $request->route('organization_slug');
 
-        if (!$slug) {
+        if (! $slug) {
             abort(404);
         }
 

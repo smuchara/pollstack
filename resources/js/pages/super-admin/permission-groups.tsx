@@ -1,6 +1,6 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Users, Shield, Building, Globe } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Shield } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import toast from 'react-hot-toast';
 

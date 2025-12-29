@@ -1,0 +1,201 @@
+<?php
+
+namespace App\Http\Controllers\SuperAdmin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Poll;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+
+class PollController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $polls = Poll::with(['organization', 'creator', 'options'])
+            ->latest()
+            ->paginate(10);
+
+        // Auto-activate and auto-close polls based on time
+        $polls->getCollection()->transform(function ($poll) {
+            // Auto-activate poll if it's scheduled and start time has arrived
+            if ($poll->status === 'scheduled' && $poll->shouldBeActivated()) {
+                $poll->update(['status' => 'active']);
+                $poll->refresh();
+            }
+
+            // Auto-close poll if it has ended
+            if ($poll->status === 'active' && $poll->hasEnded()) {
+                $poll->update(['status' => 'ended']);
+                $poll->refresh();
+            }
+
+            return $poll;
+        });
+
+        return Inertia::render('super-admin/polls', [
+            'polls' => $polls,
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'question' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'type' => 'required|string|in:open,closed',
+            'status' => 'required|string|in:scheduled,active,ended,archived',
+            'start_at' => 'nullable|date',
+            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'organization_id' => 'nullable|exists:organizations,id',
+            'options' => 'required|array|min:2',
+            'options.*.text' => 'required|string|max:255',
+        ]);
+
+        // Determine actual status based on timing
+        $status = $this->determineStatus($validated['status'], $validated['start_at'] ?? null, $validated['end_at'] ?? null);
+
+        DB::transaction(function () use ($validated, $request, $status) {
+            $poll = Poll::create([
+                'question' => $validated['question'],
+                'description' => $validated['description'],
+                'type' => $validated['type'],
+                'status' => $status,
+                'start_at' => $validated['start_at'],
+                'end_at' => $validated['end_at'],
+                'organization_id' => $validated['organization_id'],
+                'created_by' => $request->user()->id,
+            ]);
+
+            foreach ($validated['options'] as $index => $optionData) {
+                $poll->options()->create([
+                    'text' => $optionData['text'],
+                    'order' => $index,
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Poll created successfully.');
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Poll $poll)
+    {
+        // Prevent editing polls that are active or have ended to maintain credibility
+        if (in_array($poll->status, ['active', 'ended'])) {
+            return back()->with('error', 'Cannot edit polls that are active or have ended. This ensures voting integrity and prevents data manipulation.');
+        }
+
+        $validated = $request->validate([
+            'question' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'type' => 'required|string|in:open,closed',
+            'status' => 'required|string|in:scheduled,active,ended,archived',
+            'start_at' => 'nullable|date',
+            'end_at' => 'nullable|date|after_or_equal:start_at',
+            'organization_id' => 'nullable|exists:organizations,id', // Should we allow changing org? Maybe.
+            'options' => 'required|array|min:2',
+            'options.*.id' => 'nullable|exists:poll_options,id',
+            'options.*.text' => 'required|string|max:255',
+        ]);
+
+        // Determine actual status based on timing
+        $status = $this->determineStatus($validated['status'], $validated['start_at'] ?? null, $validated['end_at'] ?? null);
+
+        DB::transaction(function () use ($validated, $poll, $status) {
+            $poll->update([
+                'question' => $validated['question'],
+                'description' => $validated['description'],
+                'type' => $validated['type'],
+                'status' => $status,
+                'start_at' => $validated['start_at'],
+                'end_at' => $validated['end_at'],
+                'organization_id' => $validated['organization_id'],
+            ]);
+
+            // Sync Options
+            // 1. Get IDs of options in the request
+            $requestOptionIds = collect($validated['options'])
+                ->pluck('id')
+                ->filter()
+                ->toArray();
+
+            // 2. Delete options not in the request
+            $poll->options()->whereNotIn('id', $requestOptionIds)->delete();
+
+            // 3. Update or Create options
+            foreach ($validated['options'] as $index => $optionData) {
+                if (isset($optionData['id'])) {
+                    $poll->options()->where('id', $optionData['id'])->update([
+                        'text' => $optionData['text'],
+                        'order' => $index,
+                    ]);
+                } else {
+                    $poll->options()->create([
+                        'text' => $optionData['text'],
+                        'order' => $index,
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->back()->with('success', 'Poll updated successfully.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Poll $poll)
+    {
+        $poll->delete();
+
+        return redirect()->back()->with('success', 'Poll deleted successfully.');
+    }
+
+    public function results(Poll $poll)
+    {
+        $poll->load([
+            'options' => function ($query) {
+                $query->withCount('votes');
+            },
+        ]);
+
+        return Inertia::render('super-admin/polls/results', [
+            'poll' => $poll,
+        ]);
+    }
+
+    /**
+     * Determine the correct status based on start and end times.
+     */
+    private function determineStatus(string $requestedStatus, ?string $startAt, ?string $endAt): string
+    {
+        $now = now();
+
+        // If end time is set and has passed, status must be 'ended'
+        if ($endAt && \Carbon\Carbon::parse($endAt)->isPast()) {
+            return 'ended';
+        }
+
+        // If start time is set and in the future, status must be 'scheduled'
+        if ($startAt && \Carbon\Carbon::parse($startAt)->isFuture()) {
+            return 'scheduled';
+        }
+
+        // Otherwise, use the requested status but prevent invalid states
+        // If start time has passed but poll is marked as scheduled, activate it
+        if ($requestedStatus === 'scheduled' && $startAt && \Carbon\Carbon::parse($startAt)->isPast()) {
+            return 'active';
+        }
+
+        return $requestedStatus;
+    }
+}

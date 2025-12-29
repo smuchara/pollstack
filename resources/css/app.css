@@ -51,6 +51,18 @@
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
+    /* Analytics Colors */
+    --color-analytics-purple: oklch(0.6 0.2 280);
+    --color-analytics-cyan: oklch(0.7 0.15 200);
+    --color-analytics-green: oklch(0.65 0.18 145);
+    --color-analytics-orange: oklch(0.68 0.17 50);
+    --color-analytics-pink: oklch(0.65 0.2 350);
+    
+    /* Trend Indicators */
+    --color-trend-up: oklch(0.6 0.15 145);
+    --color-trend-down: oklch(0.6 0.18 10);
+    --color-trend-neutral: oklch(0.6 0.05 240);
+
     --color-sidebar: var(--sidebar);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);

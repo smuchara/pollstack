@@ -16,9 +16,11 @@ class OrganizationFactory extends Factory
      */
     public function definition(): array
     {
+        $name = ucfirst($this->faker->words(3, true));
+
         return [
-            'name' => $this->faker->company(),
-            'slug' => \Illuminate\Support\Str::slug($this->faker->unique()->company()),
+            'name' => $name,
+            'slug' => \Illuminate\Support\Str::slug($name.'-'.$this->faker->randomNumber(4)),
         ];
     }
 }

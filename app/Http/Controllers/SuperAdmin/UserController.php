@@ -60,6 +60,7 @@ class UserController extends Controller
     public function destroy($id)
     {
         User::findOrFail($id)->delete(); // Soft delete if trait used, or hard delete
+
         return redirect()->back();
     }
 }

@@ -52,7 +52,7 @@ class PermissionGroupController extends Controller
                 'organization_id' => $group->organization_id,
                 'permissions_count' => $group->permissions->count(),
                 'users_count' => $group->users()->count(),
-                'permissions' => $group->permissions->map(fn($p) => [
+                'permissions' => $group->permissions->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
                     'label' => $p->label,
@@ -141,7 +141,7 @@ class PermissionGroupController extends Controller
                     if ($query->exists()) {
                         $fail('The name has already been taken in this scope.');
                     }
-                }
+                },
             ],
             'label' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -191,7 +191,7 @@ class PermissionGroupController extends Controller
         }
 
         // Security Check: Global System Groups cannot be edited by Client Admins
-        if (!$user->isSuperAdmin() && $permissionGroup->organization_id === null) {
+        if (! $user->isSuperAdmin() && $permissionGroup->organization_id === null) {
             return response()->json(['message' => 'Cannot edit global system groups'], 403);
         }
 
@@ -217,7 +217,7 @@ class PermissionGroupController extends Controller
                     if ($query->exists()) {
                         $fail('The name has already been taken.');
                     }
-                }
+                },
             ],
             'label' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
@@ -255,7 +255,7 @@ class PermissionGroupController extends Controller
         }
 
         // Prevet client deleting global groups
-        if (!$user->isSuperAdmin() && $permissionGroup->organization_id === null) {
+        if (! $user->isSuperAdmin() && $permissionGroup->organization_id === null) {
             return response()->json(['message' => 'Cannot delete global groups'], 403);
         }
 

@@ -15,6 +15,7 @@ Route::get('/dashboard', function () {
     if ($user->isAdmin()) {
         return redirect()->route('tenant.admin.dashboard', app('organization')->slug);
     }
+
     return Inertia::render('user-dashboard');
 })->name('tenant.dashboard');
 
@@ -24,6 +25,7 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::get('dashboard', function () {
         $userController = new UserController;
         $stats = $userController->stats();
+
         return Inertia::render('dashboard', ['stats' => $stats]);
     })->name('dashboard');
 
@@ -55,6 +57,24 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::post('permission-groups', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'store'])->name('permission-groups.store');
     Route::put('permission-groups/{permissionGroup}', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'update'])->name('permission-groups.update');
     Route::delete('permission-groups/{permissionGroup}', [\App\Http\Controllers\Admin\PermissionGroupController::class, 'destroy'])->name('permission-groups.destroy');
+
+    // Polls management - organization admin (CRUD)
+    Route::get('polls-management', [\App\Http\Controllers\Admin\PollController::class, 'index'])->name('polls-management.index');
+    Route::post('polls-management', [\App\Http\Controllers\Admin\PollController::class, 'store'])->name('polls-management.store');
+    Route::put('polls-management/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'update'])->name('polls-management.update');
+    Route::delete('polls-management/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'destroy'])->name('polls-management.destroy');
+    Route::get('polls-management/{poll}/results', [\App\Http\Controllers\Admin\PollController::class, 'results'])->name('polls-management.results');
+
+    // Backward-compatible routes for tests (alias to polls-management)
+    Route::get('polls', [\App\Http\Controllers\Admin\PollController::class, 'index'])->name('polls.index');
+    Route::post('polls', [\App\Http\Controllers\Admin\PollController::class, 'store'])->name('polls.store');
+    Route::put('polls/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'update'])->name('polls.update');
+    Route::delete('polls/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'destroy'])->name('polls.destroy');
+    Route::get('polls/{poll}/results', [\App\Http\Controllers\Admin\PollController::class, 'results'])->name('polls.results');
+
+    // Polls voting - organization scoped
+    Route::get('polls-voting', [\App\Http\Controllers\PollController::class, 'index'])->name('polls-voting.index');
+    Route::post('polls-voting/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('polls-voting.vote');
 });
 
 // User Profile Settings (within tenant context) - prefixed to avoid conflicts
@@ -74,5 +94,3 @@ Route::get('settings/appearance', function () {
 
 Route::get('settings/two-factor', [TwoFactorAuthenticationController::class, 'show'])
     ->name('tenant.two-factor.show');
-
-

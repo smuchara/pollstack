@@ -2,17 +2,14 @@
 
 namespace App\Http\Controllers\SuperAdmin;
 
+use App\Enums\Role;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-
+use App\Jobs\SendUserInvitationJob;
 use App\Models\Organization;
 use App\Models\User;
-use App\Enums\Role;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use App\Models\UserInvitation;
-use App\Jobs\SendUserInvitationJob;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TenantProvisioningController extends Controller
 {
@@ -22,9 +19,9 @@ class TenantProvisioningController extends Controller
             ->with([
                 'users' => function ($query) {
                     $query->whereIn('role', [Role::CLIENT_SUPER_ADMIN->value, Role::ADMIN->value])
-                        ->orderByRaw("CASE WHEN role = ? THEN 1 ELSE 2 END", [Role::CLIENT_SUPER_ADMIN->value])
+                        ->orderByRaw('CASE WHEN role = ? THEN 1 ELSE 2 END', [Role::CLIENT_SUPER_ADMIN->value])
                         ->limit(1);
-                }
+                },
             ])
             ->orderByDesc('created_at')
             ->get()
@@ -35,9 +32,9 @@ class TenantProvisioningController extends Controller
                     ->whereNull('accepted_at')
                     ->exists();
 
-                if ($pendingInvitation && !$adminUser) {
+                if ($pendingInvitation && ! $adminUser) {
                     $status = 'pending_signup';
-                } elseif ($adminUser && !$adminUser->email_verified_at) {
+                } elseif ($adminUser && ! $adminUser->email_verified_at) {
                     $status = 'pending_verification';
                 } else {
                     $status = 'active';
