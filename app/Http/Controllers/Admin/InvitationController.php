@@ -10,8 +10,12 @@ use App\Models\UserInvitation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Spatie\SimpleExcel\SimpleExcelWriter;
 use Inertia\Inertia;
 use Inertia\Response;
+
+use App\Jobs\ProcessBulkInvitation;
+use Illuminate\Http\UploadedFile;
 
 class InvitationController extends Controller
 {
@@ -71,6 +75,51 @@ class InvitationController extends Controller
     }
 
     /**
+     * Handle bulk invitation via file upload.
+     */
+    public function bulkInvite(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'], // 10MB max
+            'role' => ['nullable', 'string', 'in:' . implode(',', Role::values())],
+            'permission_group_ids' => ['nullable', 'array'],
+            'permission_group_ids.*' => ['exists:permission_groups,id'],
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->store('temp-bulk-invites');
+
+        $role = $request->input('role', Role::USER->value);
+        $permissionGroupIds = $request->input('permission_group_ids', []);
+
+        // Dispatch job
+        ProcessBulkInvitation::dispatch(
+            $path,
+            $request->user()->id,
+            $request->user()->organization_id,
+            $role,
+            $permissionGroupIds
+        );
+
+        return redirect()->back()->with('success', 'Bulk invitation process started. You will be notified when completed.');
+    }
+
+    /**
+     * Download the bulk invite template.
+     */
+    public function downloadTemplate()
+    {
+        $writer = SimpleExcelWriter::streamDownload('bulk_invite_template.xlsx');
+
+        $writer->addRow([
+            'email' => 'user@example.com',
+            // Add other optional columns if we support them later, e.g. name
+        ]);
+
+        return $writer->toBrowser();
+    }
+
+    /**
      * Display the accept invitation page.
      */
     public function show(string $token): Response|RedirectResponse
@@ -78,7 +127,7 @@ class InvitationController extends Controller
         $invitation = UserInvitation::where('token', $token)->first();
 
         // Check if invitation exists
-        if (! $invitation) {
+        if (!$invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid invitation link.');
         }
@@ -118,7 +167,7 @@ class InvitationController extends Controller
             ->valid()
             ->first();
 
-        if (! $invitation) {
+        if (!$invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid or expired invitation link.');
         }
@@ -140,7 +189,7 @@ class InvitationController extends Controller
             ]);
 
             // Assign permission groups if present
-            if (! empty($invitation->permission_group_ids)) {
+            if (!empty($invitation->permission_group_ids)) {
                 $user->assignPermissionGroups($invitation->permission_group_ids);
             }
 
