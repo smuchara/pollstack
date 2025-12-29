@@ -28,21 +28,23 @@ class PollController extends Controller
             ])
             ->latest();
 
-        // Show scheduled, active, and ended polls
-        // Super admins can see ALL polls
+        // Filter polls based on user type and status
+        // Super admins WITHOUT organization see only system polls (organization_id = null)
+        // Super admins WITH organization see their organization's polls
         // Regular users see only their organization's polls or system-wide polls
-        if ($user->isSuperAdmin()) {
-            // Super admins see ALL polls (no filter)
+        if ($user->isSuperAdmin() && !$user->organization_id) {
+            // Super admins without organization see only system-wide polls
+            $query->whereNull('organization_id');
         } elseif ($user->organization_id) {
-            // Organization users see only their organization's polls
+            // Organization users (including org admins) see only their organization's polls
             $query->where('organization_id', $user->organization_id);
         } else {
             // Users without organization see only system-wide polls
             $query->whereNull('organization_id');
         }
 
-        // Show scheduled, active, and ended polls
-        $query->whereIn('status', ['scheduled', 'active', 'ended']);
+        // Only show active polls (exclude scheduled, ended, and archived)
+        $query->where('status', 'active');
 
         $polls = $query->paginate(12);
 

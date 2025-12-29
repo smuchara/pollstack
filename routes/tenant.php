@@ -65,6 +65,13 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::delete('polls-management/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'destroy'])->name('polls-management.destroy');
     Route::get('polls-management/{poll}/results', [\App\Http\Controllers\Admin\PollController::class, 'results'])->name('polls-management.results');
 
+    // Backward-compatible routes for tests (alias to polls-management)
+    Route::get('polls', [\App\Http\Controllers\Admin\PollController::class, 'index'])->name('polls.index');
+    Route::post('polls', [\App\Http\Controllers\Admin\PollController::class, 'store'])->name('polls.store');
+    Route::put('polls/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'update'])->name('polls.update');
+    Route::delete('polls/{poll}', [\App\Http\Controllers\Admin\PollController::class, 'destroy'])->name('polls.destroy');
+    Route::get('polls/{poll}/results', [\App\Http\Controllers\Admin\PollController::class, 'results'])->name('polls.results');
+
     // Polls voting - organization scoped
     Route::get('polls-voting', [\App\Http\Controllers\PollController::class, 'index'])->name('polls-voting.index');
     Route::post('polls-voting/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('polls-voting.vote');
