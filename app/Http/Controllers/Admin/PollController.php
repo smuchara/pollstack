@@ -68,11 +68,11 @@ class PollController extends Controller
         DB::transaction(function () use ($validated, $request, $organization, $status) {
             $poll = Poll::create([
                 'question' => $validated['question'],
-                'description' => $validated['description'],
+                'description' => $validated['description'] ?? null,
                 'type' => $validated['type'],
                 'status' => $status,
-                'start_at' => $validated['start_at'],
-                'end_at' => $validated['end_at'],
+                'start_at' => $validated['start_at'] ?? null,
+                'end_at' => $validated['end_at'] ?? null,
                 'organization_id' => $organization->id, // Automatically scope to organization
                 'created_by' => $request->user()->id,
             ]);
@@ -123,11 +123,11 @@ class PollController extends Controller
         DB::transaction(function () use ($validated, $poll, $status) {
             $poll->update([
                 'question' => $validated['question'],
-                'description' => $validated['description'],
+                'description' => $validated['description'] ?? null,
                 'type' => $validated['type'],
                 'status' => $status,
-                'start_at' => $validated['start_at'],
-                'end_at' => $validated['end_at'],
+                'start_at' => $validated['start_at'] ?? null,
+                'end_at' => $validated['end_at'] ?? null,
             ]);
 
             // Sync Options
