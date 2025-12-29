@@ -1,6 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { ArrowUpRight, ArrowDownRight, Users, CheckCircle2, Calendar, TrendingUp, Lock, Globe, Trash2, Share2 } from 'lucide-react';
-import { BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Users, CheckCircle2, Calendar, TrendingUp, Lock, Globe, Trash2, Share2, Eye, ChevronDown } from 'lucide-react';
 import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 
 import AppLayout from '@/layouts/app-layout';
@@ -8,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import MetricCard from '@/components/analytics/metric-card';
+import { CustomPieChart, CustomBarChart, CustomAreaChart } from '@/components/charts';
+import { PageHeader, EmptyState } from '@/components/common';
 import type { BreadcrumbItem } from '@/types';
 
 interface PollOption {
@@ -52,6 +54,7 @@ interface PercentageBreakdownItem {
     name: string;
     value: number;
     percentage: number;
+    [key: string]: string | number; // Index signature for recharts
 }
 
 interface VoterLogItem {
@@ -73,7 +76,17 @@ interface Props {
     voterLog: VoterLogItem[] | null;
 }
 
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+// Analytics color palette
+const ANALYTICS_COLORS = {
+    purple: '#8b5cf6',
+    cyan: '#06b6d4',
+    green: '#10b981',
+    orange: '#f59e0b',
+    pink: '#ec4899',
+    blue: '#6366f1',
+};
+
+const CHART_COLORS = [ANALYTICS_COLORS.purple, ANALYTICS_COLORS.cyan, ANALYTICS_COLORS.green, ANALYTICS_COLORS.orange, ANALYTICS_COLORS.pink, ANALYTICS_COLORS.blue];
 
 export default function PollResults({ poll, statistics, votingTrend, percentageBreakdown, voterLog }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
@@ -92,232 +105,202 @@ export default function PollResults({ poll, statistics, votingTrend, percentageB
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`${poll.question} - Results`} />
 
-            <div className="min-h-screen bg-background p-4 text-foreground sm:p-6 lg:p-8">
+            <div className="min-h-screen bg-background p-6 text-foreground sm:p-8 lg:p-10">
                 <div className="mx-auto max-w-7xl space-y-6">
                     {/* Header */}
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline" className="capitalize">
-                                    {poll.type === 'open' ? (
-                                        <>
-                                            <Globe className="h-3 w-3 mr-1" />
-                                            Open Ballot
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Lock className="h-3 w-3 mr-1" />
-                                            Closed Ballot
-                                        </>
-                                    )}
-                                </Badge>
-                                <Badge variant="outline" className={poll.status === 'active' ? 'bg-green-500/15 text-green-700' : 'bg-gray-500/15'}>
-                                    {poll.status === 'active' ? 'Active' : 'Ended'}
-                                </Badge>
-                            </div>
-                            <h1 className="text-3xl font-bold tracking-tight">{poll.question}</h1>
-                            {poll.description && (
-                                <p className="mt-2 text-muted-foreground">{poll.description}</p>
+                    <PageHeader
+                        title={poll.question}
+                        description={poll.description || undefined}
+                        actions={
+                            <>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                    <ChevronDown className="h-4 w-4" />
+                                    This Week
+                                </Button>
+                                <Button variant="outline" size="sm" className="gap-2">
+                                    <Share2 className="h-4 w-4" />
+                                    Share
+                                </Button>
+                                <Button variant="destructive" size="sm" className="gap-2" onClick={handleDelete}>
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                </Button>
+                            </>
+                        }
+                    />
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="capitalize gap-1.5">
+                            {poll.type === 'open' ? (
+                                <>
+                                    <Globe className="h-3.5 w-3.5" />
+                                    Open Ballot
+                                </>
+                            ) : (
+                                <>
+                                    <Lock className="h-3.5 w-3.5" />
+                                    Closed Ballot
+                                </>
                             )}
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" className="gap-2">
-                                <Share2 className="h-4 w-4" />
-                                Share Report
-                            </Button>
-                            <Button variant="destructive" className="gap-2" onClick={handleDelete}>
-                                <Trash2 className="h-4 w-4" />
-                                Delete Poll
-                            </Button>
-                        </div>
+                        </Badge>
+                        <Badge
+                            variant="outline"
+                            className={poll.status === 'active'
+                                ? 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-400 dark:border-green-800'
+                                : 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-800'
+                            }
+                        >
+                            {poll.status === 'active' ? 'Active' : 'Ended'}
+                        </Badge>
                     </div>
 
-                    {/* Stats Cards */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        {/* Total Votes */}
-                        <Card>
+                    {/* Key Metrics Row */}
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                        <MetricCard
+                            title="Total Votes"
+                            value={statistics.total_votes.toLocaleString()}
+                            icon={Users}
+                            iconColor="text-[color:var(--color-analytics-purple)]"
+                            trend={statistics.trend_percentage !== 0 ? {
+                                value: statistics.trend_percentage,
+                                label: 'from yesterday'
+                            } : undefined}
+                        />
+                        <MetricCard
+                            title="Leading Option"
+                            value={statistics.leading_option || 'N/A'}
+                            icon={CheckCircle2}
+                            iconColor="text-[color:var(--color-analytics-green)]"
+                        />
+                        <Card className="shadow-sm">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Votes</CardTitle>
-                                <Users className="h-4 w-4 text-blue-600" />
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Duration</CardTitle>
+                                <Calendar className="h-4 w-4 text-[color:var(--color-analytics-orange)]" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{statistics.total_votes}</div>
-                                {statistics.trend_percentage !== 0 && (
-                                    <p className={`text-xs flex items-center gap-1 mt-1 ${statistics.trend_percentage > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {statistics.trend_percentage > 0 ? (
-                                            <ArrowUpRight className="h-3 w-3" />
-                                        ) : (
-                                            <ArrowDownRight className="h-3 w-3" />
-                                        )}
-                                        {Math.abs(statistics.trend_percentage)}% from yesterday
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Leading Option */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Leading Option</CardTitle>
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold truncate" title={statistics.leading_option || 'N/A'}>
-                                    {statistics.leading_option || 'N/A'}
+                                <div className="space-y-0.5">
+                                    {statistics.duration.start && statistics.duration.end ? (
+                                        <>
+                                            <div className="text-base font-bold">{formatLocalDate(statistics.duration.start)}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                to {formatLocalDate(statistics.duration.end)}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-2xl font-bold">Not set</div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
-
-                        {/* Duration */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Duration</CardTitle>
-                                <Calendar className="h-4 w-4 text-orange-600" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-1">
-                                    <div className="text-sm">
-                                        {statistics.duration.start && statistics.duration.end ? (
-                                            <>
-                                                <div>{formatLocalDate(statistics.duration.start)}</div>
-                                                <div className="text-muted-foreground text-xs">
-                                                    {formatLocalDate(statistics.duration.end)}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            'Not set'
-                                        )}
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Conversion Rate */}
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-                                <TrendingUp className="h-4 w-4 text-purple-600" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{statistics.conversion_rate}%</div>
-                                <p className="text-xs text-muted-foreground">Of eligible voters</p>
-                            </CardContent>
-                        </Card>
+                        <MetricCard
+                            title="Conversion Rate"
+                            value={`${statistics.conversion_rate}%`}
+                            icon={TrendingUp}
+                            iconColor="text-[color:var(--color-analytics-cyan)]"
+                            subtitle="Of eligible voters"
+                        />
                     </div>
 
                     {/* Charts Row */}
-                    <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="grid gap-5 lg:grid-cols-2">
                         {/* Vote Distribution */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Vote Distribution</CardTitle>
+                        <Card className="shadow-sm">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base font-semibold">Vote Distribution</CardTitle>
+                                <CardDescription>Total votes per option</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={poll.options} layout="vertical">
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis type="number" />
-                                        <YAxis dataKey="text" type="category" width={120} />
-                                        <Tooltip />
-                                        <Bar dataKey="votes_count" fill="#6366f1" />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <CustomBarChart
+                                    data={poll.options}
+                                    dataKey="votes_count"
+                                    categoryKey="text"
+                                    layout="vertical"
+                                    barColor={ANALYTICS_COLORS.purple}
+                                    categoryWidth={120}
+                                />
                             </CardContent>
                         </Card>
 
                         {/* Percentage Breakdown */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Percentage Breakdown</CardTitle>
+                        <Card className="shadow-sm">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base font-semibold">Percentage Breakdown</CardTitle>
+                                <CardDescription>Vote share distribution</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <PieChart>
-                                        <Pie
-                                            data={percentageBreakdown}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={100}
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                        >
-                                            {percentageBreakdown.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                        <Legend />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                <CustomPieChart
+                                    data={percentageBreakdown}
+                                    colors={CHART_COLORS}
+                                />
                             </CardContent>
                         </Card>
                     </div>
 
                     {/* Voting Trend */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Voting Trend (Last 7 Days)</CardTitle>
+                    <Card className="shadow-sm">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-semibold">Voting Trend (Last 7 Days)</CardTitle>
+                            <CardDescription>Daily voting activity</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <AreaChart data={votingTrend}>
-                                    <defs>
-                                        <linearGradient id="colorVotes" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="date" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Area type="monotone" dataKey="votes" stroke="#6366f1" fillOpacity={1} fill="url(#colorVotes)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <CustomAreaChart
+                                data={votingTrend}
+                                dataKey="votes"
+                                categoryKey="date"
+                                color={ANALYTICS_COLORS.purple}
+                            />
                         </CardContent>
                     </Card>
 
                     {/* Voter Log */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Voter Log</CardTitle>
+                    <Card className="shadow-sm">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-semibold">Voter Log</CardTitle>
+                            <CardDescription>
+                                {poll.type === 'open' ? 'Public voting records' : 'Anonymized voting data'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {poll.type === 'closed' ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <Lock className="h-12 w-12 text-muted-foreground mb-3" />
-                                    <p className="text-lg font-medium">Voter information is private and locked</p>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        This is a closed ballot. Individual votes are confidential.
-                                    </p>
-                                </div>
+                                <EmptyState
+                                    icon={Lock}
+                                    title="Voter information is private"
+                                    description="This is a closed ballot. Individual votes are confidential and cannot be viewed."
+                                />
                             ) : voterLog && voterLog.length > 0 ? (
-                                <div className="space-y-1">
+                                <div className="space-y-0 rounded-md border">
                                     {/* Header */}
-                                    <div className="grid grid-cols-3 gap-4 p-3 border-b font-medium text-sm text-muted-foreground">
+                                    <div className="grid grid-cols-3 gap-4 px-4 py-3 bg-muted/30 border-b font-medium text-xs text-muted-foreground uppercase tracking-wide">
                                         <div>Voter</div>
                                         <div>Selection</div>
                                         <div>Timestamp</div>
                                     </div>
                                     {/* Rows */}
-                                    {voterLog.map((log) => (
-                                        <div key={log.id} className="grid grid-cols-3 gap-4 p-3 border-b hover:bg-muted/50">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-8 w-8">
-                                                    <AvatarFallback>{log.voter.avatar}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="font-medium">{log.voter.name}</span>
+                                    <div className="divide-y">
+                                        {voterLog.map((log) => (
+                                            <div key={log.id} className="grid grid-cols-3 gap-4 px-4 py-3 hover:bg-muted/50 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="h-8 w-8 border">
+                                                        <AvatarFallback className="text-xs">{log.voter.avatar}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-sm truncate">{log.voter.name}</p>
+                                                        <p className="text-xs text-muted-foreground truncate">{log.voter.email}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center">
+                                                    <span className="text-sm">{log.selection}</span>
+                                                </div>
+                                                <div className="flex items-center text-sm text-muted-foreground">{log.timestamp}</div>
                                             </div>
-                                            <div>{log.selection}</div>
-                                            <div className="text-muted-foreground">{log.timestamp}</div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    No votes cast yet
-                                </div>
+                                <EmptyState
+                                    icon={Eye}
+                                    title="No votes cast yet"
+                                    description=""
+                                />
                             )}
                         </CardContent>
                     </Card>

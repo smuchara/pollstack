@@ -1,13 +1,11 @@
 import { Head, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Calendar, Lock, Globe, Clock } from 'lucide-react';
-import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
+import { Plus, Edit, Trash2, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Components
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     AlertDialog,
@@ -19,6 +17,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { PageHeader, EmptyState } from '@/components/common';
+import PollStatusBadge from '@/components/polls/poll-status-badge';
+import PollTypeBadge from '@/components/polls/poll-type-badge';
+import PollTiming from '@/components/polls/poll-timing';
 
 // Types
 import type { BreadcrumbItem } from '@/types';
@@ -98,14 +100,7 @@ export default function PollsIndex({ polls }: Props) {
         });
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active': return 'bg-green-500/15 text-green-700 dark:bg-green-500/20 dark:text-green-400 border-green-200 dark:border-green-800';
-            case 'scheduled': return 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-800';
-            case 'ended': return 'bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-200 dark:border-gray-800';
-            default: return 'secondary';
-        }
-    };
+
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -114,21 +109,16 @@ export default function PollsIndex({ polls }: Props) {
             <div className="min-h-screen bg-background p-4 text-foreground sm:p-6 lg:p-8">
                 <div className="mx-auto max-w-7xl space-y-6">
                     {/* Header */}
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                                Polls Management
-                            </h1>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Create and manage polls for your organization.
-                            </p>
-                        </div>
-
-                        <Button onClick={handleCreate} className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            Create Poll
-                        </Button>
-                    </div>
+                    <PageHeader
+                        title="Polls Management"
+                        description="Create and manage polls for your organization."
+                        actions={
+                            <Button onClick={handleCreate} className="gap-2">
+                                <Plus className="h-4 w-4" />
+                                Create Poll
+                            </Button>
+                        }
+                    />
 
                     {/* Polls Grid */}
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
@@ -138,14 +128,8 @@ export default function PollsIndex({ polls }: Props) {
                                     <div className="flex justify-between items-start gap-2">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className={`capitalize border ${getStatusColor(poll.status)}`}>
-                                                    {poll.status}
-                                                </Badge>
-                                                {poll.type === 'closed' ? (
-                                                    <Lock className="h-3 w-3 text-muted-foreground" />
-                                                ) : (
-                                                    <Globe className="h-3 w-3 text-muted-foreground" />
-                                                )}
+                                                <PollStatusBadge status={poll.status} />
+                                                <PollTypeBadge type={poll.type} />
                                             </div>
                                             <CardTitle className="text-lg leading-tight line-clamp-2" title={poll.question}>
                                                 {poll.question}
@@ -173,50 +157,10 @@ export default function PollsIndex({ polls }: Props) {
                                         </div>
 
                                         {/* Poll Timing Information */}
-                                        <div className="space-y-2 border-t pt-3">
-                                            {/* Duration Badge */}
-                                            {poll.start_at && poll.end_at && (
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-medium text-muted-foreground">Duration:</span>
-                                                    <div className="flex items-center gap-1 text-xs font-semibold text-foreground bg-primary/10 px-2 py-1 rounded">
-                                                        <Clock className="h-3 w-3" />
-                                                        {calculateDuration(poll.start_at, poll.end_at)}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Start Time */}
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-muted-foreground">Starts:</span>
-                                                <span className="font-medium">
-                                                    {poll.start_at ? (
-                                                        <>
-                                                            {formatLocalDate(poll.start_at)}{' '}
-                                                            <span className="text-muted-foreground">at</span>{' '}
-                                                            {formatLocalTimeOnly(poll.start_at)}
-                                                        </>
-                                                    ) : (
-                                                        'Not set'
-                                                    )}
-                                                </span>
-                                            </div>
-
-                                            {/* End Time */}
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-muted-foreground">Ends:</span>
-                                                <span className="font-medium">
-                                                    {poll.end_at ? (
-                                                        <>
-                                                            {formatLocalDate(poll.end_at)}{' '}
-                                                            <span className="text-muted-foreground">at</span>{' '}
-                                                            {formatLocalTimeOnly(poll.end_at)}
-                                                        </>
-                                                    ) : (
-                                                        'Not set'
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <PollTiming
+                                            startAt={poll.start_at}
+                                            endAt={poll.end_at}
+                                        />
                                     </div>
                                 </CardContent>
                                 <CardFooter className="pt-3 border-t bg-muted/10 flex justify-between gap-2">
@@ -241,17 +185,16 @@ export default function PollsIndex({ polls }: Props) {
                     </div>
 
                     {polls.data.length === 0 && (
-                        <div className="text-center py-12 rounded-lg border border-dashed bg-muted/20">
-                            <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                            <h3 className="text-lg font-medium">No polls found</h3>
-                            <p className="text-muted-foreground text-sm mt-1">
-                                Create your first poll to get started.
-                            </p>
-                            <Button onClick={handleCreate} className="mt-4 gap-2">
-                                <Plus className="h-4 w-4" />
-                                Create Poll
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={Calendar}
+                            title="No polls found"
+                            description="Create your first poll to get started."
+                            action={{
+                                label: 'Create Poll',
+                                onClick: handleCreate,
+                                icon: Plus
+                            }}
+                        />
                     )}
                 </div>
             </div>

@@ -1,15 +1,17 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CheckCircle2, Circle, Lock, Globe, Calendar, Users, Clock, PieChart } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, PieChart, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { PageHeader, EmptyState } from '@/components/common';
+import PollStatusBadge from '@/components/polls/poll-status-badge';
+import PollTypeBadge from '@/components/polls/poll-type-badge';
+import PollTiming from '@/components/polls/poll-timing';
 import { type BreadcrumbItem } from '@/types';
 
 interface PollOption {
@@ -89,18 +91,7 @@ export default function PollsIndex({ polls }: Props) {
         );
     };
 
-    const getPollBadgeColor = (poll: Poll) => {
-        if (poll.status === 'scheduled') {
-            return 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-800';
-        }
-        if (poll.status === 'ended') {
-            return 'bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-200 dark:border-gray-800';
-        }
-        if (poll.user_has_voted) {
-            return 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
-        }
-        return 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-800';
-    };
+
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -109,16 +100,10 @@ export default function PollsIndex({ polls }: Props) {
             <div className="min-h-screen bg-background p-4 text-foreground sm:p-6 lg:p-8">
                 <div className="mx-auto max-w-7xl space-y-6">
                     {/* Header */}
-                    <div className="flex flex-col gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                                Active Polls
-                            </h1>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Participate in ongoing polls and make your voice heard.
-                            </p>
-                        </div>
-                    </div>
+                    <PageHeader
+                        title="Active Polls"
+                        description="Participate in ongoing polls and make your voice heard."
+                    />
 
                     {/* Polls Grid */}
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
@@ -128,25 +113,11 @@ export default function PollsIndex({ polls }: Props) {
                                     <div className="flex justify-between items-start gap-2">
                                         <div className="space-y-1 flex-1">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`capitalize border ${getPollBadgeColor(poll)}`}
-                                                >
-                                                    {poll.status === 'scheduled' ? (
-                                                        <><Clock className="h-3 w-3 mr-1" /> Scheduled</>
-                                                    ) : poll.status === 'ended' ? (
-                                                        'Poll Ended'
-                                                    ) : poll.user_has_voted ? (
-                                                        <><CheckCircle2 className="h-3 w-3 mr-1" /> Voted</>
-                                                    ) : (
-                                                        'Active'
-                                                    )}
-                                                </Badge>
-                                                {poll.type === 'closed' ? (
-                                                    <Lock className="h-3 w-3 text-muted-foreground" />
-                                                ) : (
-                                                    <Globe className="h-3 w-3 text-muted-foreground" />
-                                                )}
+                                                <PollStatusBadge
+                                                    status={poll.status}
+                                                    userHasVoted={poll.user_has_voted}
+                                                />
+                                                <PollTypeBadge type={poll.type} />
                                             </div>
                                             <CardTitle className="text-lg leading-tight line-clamp-2" title={poll.question}>
                                                 {poll.question}
@@ -247,61 +218,11 @@ export default function PollsIndex({ polls }: Props) {
                                     )}
 
                                     {/* Poll Timing Information */}
-                                    <div className="space-y-2 border-t pt-3 mt-3">
-                                        {/* Duration Badge */}
-                                        {poll.start_at && poll.end_at && (
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-xs font-medium text-muted-foreground">Duration:</span>
-                                                <div className="flex items-center gap-1 text-xs font-semibold text-foreground bg-primary/10 px-2 py-1 rounded">
-                                                    <Clock className="h-3 w-3" />
-                                                    {calculateDuration(poll.start_at, poll.end_at)}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Start Time */}
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-muted-foreground">Starts:</span>
-                                            <span className="font-medium">
-                                                {poll.start_at ? (
-                                                    <>
-                                                        {formatLocalDate(poll.start_at)}{' '}
-                                                        <span className="text-muted-foreground">at</span>{' '}
-                                                        {formatLocalTimeOnly(poll.start_at)}
-                                                    </>
-                                                ) : (
-                                                    'Not set'
-                                                )}
-                                            </span>
-                                        </div>
-
-                                        {/* End Time */}
-                                        <div className="flex items-center justify-between text-xs">
-                                            <span className="text-muted-foreground">Ends:</span>
-                                            <span className="font-medium">
-                                                {poll.end_at ? (
-                                                    <>
-                                                        {formatLocalDate(poll.end_at)}{' '}
-                                                        <span className="text-muted-foreground">at</span>{' '}
-                                                        {formatLocalTimeOnly(poll.end_at)}
-                                                    </>
-                                                ) : (
-                                                    'Not set'
-                                                )}
-                                            </span>
-                                        </div>
-
-                                        {/* Organization */}
-                                        {poll.organization && (
-                                            <div className="flex items-center justify-between text-xs pt-2 border-t">
-                                                <span className="text-muted-foreground">Organization:</span>
-                                                <Badge variant="secondary" className="text-[10px] h-5">
-                                                    <Users className="h-3 w-3 mr-1" />
-                                                    {poll.organization.name}
-                                                </Badge>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <PollTiming
+                                        startAt={poll.start_at}
+                                        endAt={poll.end_at}
+                                        organization={poll.organization}
+                                    />
                                 </CardContent>
 
                                 {!poll.user_has_voted && poll.status === 'active' ? (
@@ -331,13 +252,11 @@ export default function PollsIndex({ polls }: Props) {
                     </div>
 
                     {polls.data.length === 0 && (
-                        <div className="text-center py-12 rounded-lg border border-dashed bg-muted/20">
-                            <Circle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                            <h3 className="text-lg font-medium">No active polls</h3>
-                            <p className="text-muted-foreground text-sm mt-1">
-                                There are currently no polls available for you to vote on.
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={Circle}
+                            title="No active polls"
+                            description="There are currently no polls available for you to vote on."
+                        />
                     )}
                 </div>
             </div>
