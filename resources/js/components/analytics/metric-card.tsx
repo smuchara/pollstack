@@ -1,7 +1,5 @@
-import { ReactNode } from 'react';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 
 interface MetricCardProps {
     title: string;

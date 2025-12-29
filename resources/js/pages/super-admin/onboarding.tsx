@@ -1,4 +1,4 @@
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { Building2, Users, TrendingUp, Plus, ExternalLink, CheckCircle2, Clock, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';

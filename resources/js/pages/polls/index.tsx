@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CheckCircle2, Circle, Clock, PieChart, Plus } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, PieChart } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import AppLayout from '@/layouts/app-layout';
@@ -81,7 +81,7 @@ export default function PollsIndex({ polls }: Props) {
                 onSuccess: () => {
                     toast.success('Vote cast successfully!');
                 },
-                onError: (errors: any) => {
+                onError: (errors: Record<string, string>) => {
                     toast.error(errors.poll || 'Failed to cast vote');
                 },
                 onFinish: () => {

@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Users, CheckCircle2, Calendar, TrendingUp, Lock, Globe, Trash2, Share2, Eye, ChevronDown } from 'lucide-react';
-import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
+import { formatLocalDate } from '@/lib/date-utils';
 
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';

@@ -135,7 +135,7 @@ export function AppSidebar() {
         }
 
         return items;
-    }, [user, dashboardUrl, tenantBaseUrl]);
+    }, [user, dashboardUrl, tenantBaseUrl, organization_slug]);
 
     return (
         <Sidebar collapsible="icon" variant="inset">

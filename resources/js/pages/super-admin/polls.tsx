@@ -1,4 +1,4 @@
-import { Head, usePage, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Calendar, Lock, Globe, Clock } from 'lucide-react';
 import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';

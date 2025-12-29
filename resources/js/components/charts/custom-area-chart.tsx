@@ -1,11 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-interface AreaChartData {
-    [key: string]: string | number;
-}
-
 interface CustomAreaChartProps {
-    data: Record<string, any>[];
+    data: Record<string, string | number>[];
     dataKey: string;
     categoryKey: string;
     color?: string;
@@ -14,7 +10,7 @@ interface CustomAreaChartProps {
 }
 
 // Custom tooltip for area chart
-const CustomAreaTooltip = ({ active, payload, label }: any) => {
+const CustomAreaTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
     if (active && payload && payload.length) {
         return (
             <div className="rounded-lg border bg-card px-4 py-2.5 shadow-lg">

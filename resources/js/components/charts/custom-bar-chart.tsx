@@ -1,7 +1,7 @@
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface CustomBarChartProps {
-    data: Record<string, any>[];
+    data: Record<string, string | number>[];
     dataKey: string;
     categoryKey: string;
     layout?: 'horizontal' | 'vertical';
@@ -11,7 +11,7 @@ interface CustomBarChartProps {
 }
 
 // Custom tooltip for bar chart
-const CustomBarTooltip = ({ active, payload, label }: any) => {
+const CustomBarTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
     if (active && payload && payload.length) {
         return (
             <div className="rounded-lg border bg-card px-4 py-2.5 shadow-lg">

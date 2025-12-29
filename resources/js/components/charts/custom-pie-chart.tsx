@@ -17,7 +17,7 @@ interface CustomPieChartProps {
 }
 
 // Custom tooltip for pie chart to show percentages
-const CustomPieTooltip = ({ active, payload }: any) => {
+const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload: PieChartData }> }) => {
     if (active && payload && payload.length) {
         const data = payload[0];
         return (

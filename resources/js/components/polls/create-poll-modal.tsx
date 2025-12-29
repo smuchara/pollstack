@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm, usePage, router } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import { Plus, Trash2, Calendar, Lock, Globe, Clock, AlignLeft, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { localToUTC, utcToLocalInput } from '@/lib/date-utils';
@@ -23,27 +23,39 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
 
 interface PollOption {
     text: string;
+    id?: number;
+    votes_count?: number;
+}
+
+interface Poll {
+    id?: number;
+    question: string;
+    description?: string | null;
+    type: string;
+    status?: string;
+    start_at?: string | null;
+    end_at?: string | null;
+    organization_id?: number | string | null;
+    options?: PollOption[];
 }
 
 interface CreatePollModalProps {
     isOpen: boolean;
     onClose: () => void;
-    poll?: any; // We can refine this type later
-    context?: 'super-admin' | 'organization'; // Add context prop
-    organizationSlug?: string; // Add organization slug for org admin context
-    organizationId?: number; // Add organization ID for org admin context
+    poll?: Poll;
+    context?: 'super-admin' | 'organization';
+    organizationSlug?: string;
 }
 
-export default function CreatePollModal({ isOpen, onClose, poll, context = 'super-admin', organizationSlug, organizationId }: CreatePollModalProps) {
-    const { props } = usePage();
+export default function CreatePollModal({ isOpen, onClose, poll, context = 'super-admin', organizationSlug }: CreatePollModalProps) {
 
     // Initialize options based on poll or default
     const [options, setOptions] = useState<PollOption[]>(
-        poll?.options?.map((o: any) => ({ text: o.text })) || [{ text: '' }, { text: '' }]
+        poll?.options?.map((o) => ({ text: o.text })) || [{ text: '' }, { text: '' }]
     );
 
     const form = useForm({
@@ -69,7 +81,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
             organization_id: poll.organization_id || '',
             options: [],
         });
-        setOptions(poll.options?.map((o: any) => ({ text: o.text })) || [{ text: '' }, { text: '' }]);
+        setOptions(poll.options?.map((o) => ({ text: o.text })) || [{ text: '' }, { text: '' }]);
     }
 
     const handleOptionChange = (index: number, value: string) => {
@@ -100,7 +112,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
         }
 
         // Prepare data with proper null handling for organization_id
-        const organizationId = form.data.organization_id && form.data.organization_id !== ''
+        const preparedOrganizationId = form.data.organization_id && form.data.organization_id !== ''
             ? form.data.organization_id
             : null;
 
@@ -111,7 +123,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
             status: form.data.status,
             start_at: form.data.start_at ? localToUTC(form.data.start_at) : null,
             end_at: form.data.end_at ? localToUTC(form.data.end_at) : null,
-            organization_id: organizationId,
+            organization_id: preparedOrganizationId,
             options: options,
         };
 
@@ -121,6 +133,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
             : '/super-admin/polls';
 
         if (poll) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             router.put(`${baseUrl}/${poll.id}`, dataToSubmit as any, {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -128,12 +141,13 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
                     form.reset();
                     onClose();
                 },
-                onError: (errors: any) => {
+                onError: (errors) => {
                     toast.error('Failed to update poll.');
                     console.error(errors);
                 },
             });
         } else {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             router.post(baseUrl, dataToSubmit as any, {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -142,7 +156,7 @@ export default function CreatePollModal({ isOpen, onClose, poll, context = 'supe
                     setOptions([{ text: '' }, { text: '' }]);
                     onClose();
                 },
-                onError: (errors: any) => {
+                onError: (errors) => {
                     toast.error('Failed to create poll.');
                     console.error(errors);
                 },

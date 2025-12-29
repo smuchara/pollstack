@@ -91,8 +91,8 @@ export default function PollResults({ poll }: Props) {
                                             cursor={{ fill: 'var(--muted)', opacity: 0.2 }}
                                         />
                                         <Bar dataKey="votes" fill="var(--primary)" radius={[0, 4, 4, 0]}>
-                                            {data.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill="hsl(var(--primary))" />
+                                            {data.map((entry) => (
+                                                <Cell key={`cell-${entry.name}`} fill="hsl(var(--primary))" />
                                             ))}
                                         </Bar>
                                     </BarChart>
@@ -108,7 +108,7 @@ export default function PollResults({ poll }: Props) {
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {poll.options.map((option, index) => {
+                                    {poll.options.map((option) => {
                                         const percentage = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
                                         return (
                                             <div key={option.id} className="space-y-1">
