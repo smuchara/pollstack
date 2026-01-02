@@ -1,3 +1,4 @@
+import { ConfirmPasswordDialog } from '@/components/confirm-password-dialog';
 import HeadingSmall from '@/components/heading-small';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
@@ -23,6 +24,7 @@ export default function TwoFactor({
     const { url } = usePage<{ url: string }>().props;
     const [processingEnable, setProcessingEnable] = useState(false);
     const [processingDisable, setProcessingDisable] = useState(false);
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -43,7 +45,13 @@ export default function TwoFactor({
     } = useTwoFactorAuth();
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
 
-    const handleEnable = () => {
+    const handleEnableClick = () => {
+        // Show password confirmation dialog first
+        setShowPasswordDialog(true);
+    };
+
+    const handlePasswordConfirmed = () => {
+        // Password confirmed, now enable 2FA
         setProcessingEnable(true);
         router.post('/user/two-factor-authentication', {}, {
             preserveScroll: true,
@@ -124,7 +132,7 @@ export default function TwoFactor({
                                     <Button
                                         type="button"
                                         disabled={processingEnable}
-                                        onClick={handleEnable}
+                                        onClick={handleEnableClick}
                                     >
                                         <ShieldCheck />
                                         {processingEnable ? 'Enabling...' : 'Enable 2FA'}
@@ -144,6 +152,14 @@ export default function TwoFactor({
                         clearSetupData={clearSetupData}
                         fetchSetupData={fetchSetupData}
                         errors={errors}
+                    />
+
+                    <ConfirmPasswordDialog
+                        isOpen={showPasswordDialog}
+                        onClose={() => setShowPasswordDialog(false)}
+                        onConfirmed={handlePasswordConfirmed}
+                        title="Confirm your password"
+                        description="For your security, please confirm your password to enable two-factor authentication."
                     />
                 </div>
             </SettingsLayout>
