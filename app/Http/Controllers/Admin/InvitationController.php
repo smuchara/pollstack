@@ -5,18 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InviteUsersRequest;
+use App\Jobs\ProcessBulkInvitation;
 use App\Jobs\SendUserInvitationJob;
 use App\Models\UserInvitation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Spatie\SimpleExcel\SimpleExcelWriter;
 use Inertia\Inertia;
 use Inertia\Response;
-
-use App\Jobs\ProcessBulkInvitation;
-use Illuminate\Http\UploadedFile;
+use Spatie\SimpleExcel\SimpleExcelWriter;
 
 class InvitationController extends Controller
 {
@@ -53,7 +50,7 @@ class InvitationController extends Controller
                     $successCount++;
 
                     // Dispatch the job to send the invitation email
-                    SendUserInvitationJob::dispatch($invitation);
+                    SendUserInvitationJob::dispatch($invitation->id);
                 } catch (\Exception $e) {
                     // Log the error but continue with other invitations
                     \Log::error('Failed to create invitation', [
@@ -82,7 +79,7 @@ class InvitationController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'], // 10MB max
-            'role' => ['nullable', 'string', 'in:' . implode(',', Role::values())],
+            'role' => ['nullable', 'string', 'in:'.implode(',', Role::values())],
             'permission_group_ids' => ['nullable', 'array'],
             'permission_group_ids.*' => ['exists:permission_groups,id'],
         ]);
@@ -125,10 +122,10 @@ class InvitationController extends Controller
      */
     public function progress(Request $request)
     {
-        $cacheKey = "bulk_invite_progress_" . $request->user()->id;
+        $cacheKey = 'bulk_invite_progress_'.$request->user()->id;
         $progress = \Illuminate\Support\Facades\Cache::get($cacheKey);
 
-        if (!$progress) {
+        if (! $progress) {
             return response()->json(['status' => 'idle']);
         }
 
@@ -143,7 +140,7 @@ class InvitationController extends Controller
         $invitation = UserInvitation::where('token', $token)->first();
 
         // Check if invitation exists
-        if (!$invitation) {
+        if (! $invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid invitation link.');
         }
@@ -183,7 +180,7 @@ class InvitationController extends Controller
             ->valid()
             ->first();
 
-        if (!$invitation) {
+        if (! $invitation) {
             return redirect()->route('login')
                 ->with('error', 'Invalid or expired invitation link.');
         }
@@ -205,7 +202,7 @@ class InvitationController extends Controller
             ]);
 
             // Assign permission groups if present
-            if (!empty($invitation->permission_group_ids)) {
+            if (! empty($invitation->permission_group_ids)) {
                 $user->assignPermissionGroups($invitation->permission_group_ids);
             }
 
@@ -258,7 +255,7 @@ class InvitationController extends Controller
         ]);
 
         // Dispatch the job to send the invitation email
-        SendUserInvitationJob::dispatch($invitation);
+        SendUserInvitationJob::dispatch($invitation->id);
 
         return redirect()->back()
             ->with('success', 'Invitation resent successfully.');

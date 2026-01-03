@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Jobs\SendUserInvitationJob;
 use App\Models\User;
 use App\Models\UserInvitation;
 use Illuminate\Bus\Queueable;
@@ -10,9 +9,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Cache;
 use Spatie\SimpleExcel\SimpleExcelReader;
 
 class ProcessBulkInvitation implements ShouldQueue
@@ -28,8 +27,7 @@ class ProcessBulkInvitation implements ShouldQueue
         public int $organizationId,
         public string $role,
         public array $permissionGroupIds = []
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -37,8 +35,9 @@ class ProcessBulkInvitation implements ShouldQueue
     public function handle(): void
     {
         // Check if file exists
-        if (!Storage::exists($this->filePath)) {
+        if (! Storage::exists($this->filePath)) {
             \Log::error("Bulk Invite File not found: {$this->filePath}");
+
             return;
         }
 
@@ -46,14 +45,11 @@ class ProcessBulkInvitation implements ShouldQueue
         $validEmails = [];
 
         // Read emails from file
-        // Assumes 'email' header exists, case-insensitive
         $reader = SimpleExcelReader::create($path)
             ->trimHeaderRow()
             ->headersToSnakeCase();
 
         $reader->getRows()->each(function (array $row) use (&$validEmails) {
-            // Check for 'email' or 'e_mail' or just grab the first column if no header? 
-            // Better to enforce 'email' header.
             $email = $row['email'] ?? null;
 
             if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -64,6 +60,7 @@ class ProcessBulkInvitation implements ShouldQueue
         if (empty($validEmails)) {
             $this->markAsCompleted(0);
             $this->cleanup();
+
             return;
         }
 
@@ -84,25 +81,26 @@ class ProcessBulkInvitation implements ShouldQueue
         if (empty($emailsToInvite)) {
             $this->markAsCompleted(0);
             $this->cleanup();
+
             return;
         }
 
         // Process invites
-        // We do this in chunks to avoid locking the DB for too long if list is huge
-        // But for 1000, one transaction is okay.
-
-        // Initialize progress
         $total = count($emailsToInvite);
-        $processed = 0;
         $cacheKey = "bulk_invite_progress_{$this->invitedBy}";
 
+        // Initialize progress with real-time tracking fields
         Cache::put($cacheKey, [
             'total' => $total,
+            'queued' => 0,
+            'sent' => 0,
             'processed' => 0,
-            'status' => 'processing'
+            'status' => 'processing',
         ], 3600);
 
-        DB::transaction(function () use ($emailsToInvite, $cacheKey, $total, &$processed) {
+        $queued = 0;
+
+        DB::transaction(function () use ($emailsToInvite, $total, &$queued) {
             foreach ($emailsToInvite as $email) {
                 try {
                     $invitation = UserInvitation::create([
@@ -115,24 +113,24 @@ class ProcessBulkInvitation implements ShouldQueue
                         'expires_at' => now()->addDays(7),
                     ]);
 
-                    SendUserInvitationJob::dispatch($invitation);
+                    // Pass batch info so SendUserInvitationJob can update real-time progress
+                    SendUserInvitationJob::dispatch($invitation->id, $this->invitedBy, $total);
                 } catch (\Exception $e) {
-                    \Log::error("Failed to invite {$email}: " . $e->getMessage());
+                    \Log::error("Failed to invite {$email}: ".$e->getMessage());
                 }
 
-                $processed++;
-                // Update progress every 5 items or if it's the last one
-                if ($processed % 5 === 0 || $processed === $total) {
-                    Cache::put($cacheKey, [
-                        'total' => $total,
-                        'processed' => $processed,
-                        'status' => 'processing'
-                    ], 3600);
-                }
+                $queued++;
             }
         });
 
-        $this->markAsCompleted($total);
+        // Update status to 'sending' - all jobs queued, now sending emails
+        Cache::put($cacheKey, [
+            'total' => $total,
+            'queued' => $total,
+            'sent' => 0,
+            'processed' => 0,
+            'status' => 'sending',
+        ], 3600);
 
         $this->cleanup();
     }
@@ -140,11 +138,13 @@ class ProcessBulkInvitation implements ShouldQueue
     protected function markAsCompleted(int $total): void
     {
         $cacheKey = "bulk_invite_progress_{$this->invitedBy}";
-        Cache::store('file')->put($cacheKey, [
+        Cache::put($cacheKey, [
             'total' => $total,
+            'queued' => $total,
+            'sent' => $total,
             'processed' => $total,
-            'status' => 'completed'
-        ], 300);
+            'status' => 'completed',
+        ], 120);
     }
 
     protected function cleanup(): void

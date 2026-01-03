@@ -1,55 +1,122 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { usePage } from '@inertiajs/react';
 
 export interface ProgressData {
     total: number;
+    queued?: number;
+    sent?: number;
     processed: number;
-    status: 'idle' | 'processing' | 'completed';
+    status: 'idle' | 'processing' | 'sending' | 'completed';
+}
+
+const BULK_INVITE_ACTIVE_KEY = 'bulk_invite_active';
+const BULK_INVITE_EVENT = 'bulk-invite-triggered';
+const MAX_IDLE_RETRIES = 5;
+
+/**
+ * Call this to trigger the progress widget immediately after submitting bulk invite
+ */
+export function triggerBulkInviteProgress() {
+    sessionStorage.setItem(BULK_INVITE_ACTIVE_KEY, 'true');
+    window.dispatchEvent(new CustomEvent(BULK_INVITE_EVENT));
 }
 
 export function useBulkInviteProgress() {
     const { organization_slug } = usePage<{ organization_slug?: string }>().props;
     const [progress, setProgress] = useState<ProgressData | null>(null);
     const [isVisible, setIsVisible] = useState(false);
+    const [pollKey, setPollKey] = useState(0);
+    const autoDismissTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const idleCountRef = useRef<number>(0);
+    const hasSeenProgressRef = useRef<boolean>(false);
 
+    const baseUrl = organization_slug
+        ? `/organization/${organization_slug}/admin`
+        : '/admin';
+
+    const clearProgress = useCallback(async () => {
+        if (autoDismissTimerRef.current) {
+            clearTimeout(autoDismissTimerRef.current);
+            autoDismissTimerRef.current = null;
+        }
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
+        try {
+            await axios.delete(`${baseUrl}/invitations/bulk/progress`);
+        } catch (error) {
+            // Ignore errors
+        }
+        sessionStorage.removeItem(BULK_INVITE_ACTIVE_KEY);
+        setIsVisible(false);
+        setProgress(null);
+        idleCountRef.current = 0;
+        hasSeenProgressRef.current = false;
+    }, [baseUrl]);
+
+    const dismiss = useCallback(() => {
+        clearProgress();
+    }, [clearProgress]);
+
+    // Listen for trigger event
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
+        const handleTrigger = () => {
+            idleCountRef.current = 0;
+            hasSeenProgressRef.current = false;
+            setIsVisible(true);
+            setProgress({ total: 0, processed: 0, status: 'processing' });
+            setPollKey(prev => prev + 1);
+        };
+        window.addEventListener(BULK_INVITE_EVENT, handleTrigger);
+        return () => window.removeEventListener(BULK_INVITE_EVENT, handleTrigger);
+    }, []);
+
+    // Check on mount for active session
+    useEffect(() => {
+        if (sessionStorage.getItem(BULK_INVITE_ACTIVE_KEY) === 'true') {
+            setIsVisible(true);
+            setProgress({ total: 0, processed: 0, status: 'processing' });
+            setPollKey(prev => prev + 1);
+        }
+    }, []);
+
+    // Polling effect
+    useEffect(() => {
+        if (!isVisible) return;
 
         const checkProgress = async () => {
             try {
-                // Use manual URL construction as Ziggy is not available
-                // If organization_slug exists, use tenant route, otherwise admin (though this feature is tenant only)
-                const baseUrl = organization_slug
-                    ? `/organization/${organization_slug}/admin`
-                    : '/admin';
-
-                const url = `${baseUrl}/invitations/bulk/progress`;
-
-                const response = await axios.get(url);
+                const response = await axios.get(`${baseUrl}/invitations/bulk/progress`);
                 const data = response.data;
-                console.log('Bulk Invite Progress:', data);
 
-                if (data.status !== 'idle') {
+                if (data.status === 'processing' || data.status === 'sending') {
+                    idleCountRef.current = 0;
+                    hasSeenProgressRef.current = true;
                     setProgress(data);
-                    setIsVisible(true);
-
-                    // If completed, we can stop polling after a short delay or just let the user dismiss
-                    if (data.status === 'completed') {
-                        // Keep visible for a moment? Or just rely on user closing it. 
-                        // We will stop polling if we reached 100% and showed it? 
-                        // Actually, if we stop polling, we won't know if another job starts. 
-                        // But usually bulk invite is manual.
-                        // Let's keep polling but maybe slower? 
-                        // For now, consistent polling.
+                } else if (data.status === 'completed') {
+                    idleCountRef.current = 0;
+                    hasSeenProgressRef.current = true;
+                    setProgress(data);
+                    if (pollingIntervalRef.current) {
+                        clearInterval(pollingIntervalRef.current);
+                        pollingIntervalRef.current = null;
                     }
-                } else {
-                    // If we were visible and now idle, maybe the cache expired or job finished long ago.
-                    if (isVisible && progress?.status === 'completed') {
-                        // stay visible until dismissed
-                    } else {
+                    if (!autoDismissTimerRef.current) {
+                        autoDismissTimerRef.current = setTimeout(() => clearProgress(), 5000);
+                    }
+                } else if (data.status === 'idle') {
+                    idleCountRef.current += 1;
+                    if (hasSeenProgressRef.current || idleCountRef.current >= MAX_IDLE_RETRIES) {
+                        sessionStorage.removeItem(BULK_INVITE_ACTIVE_KEY);
                         setIsVisible(false);
                         setProgress(null);
+                        if (pollingIntervalRef.current) {
+                            clearInterval(pollingIntervalRef.current);
+                            pollingIntervalRef.current = null;
+                        }
                     }
                 }
             } catch (error) {
@@ -57,17 +124,15 @@ export function useBulkInviteProgress() {
             }
         };
 
-        // Poll every 2 seconds
-        intervalId = setInterval(checkProgress, 2000);
-        checkProgress(); // Initial check
+        pollingIntervalRef.current = setInterval(checkProgress, 1500);
+        checkProgress();
 
-        return () => clearInterval(intervalId);
-    }, [isVisible]); // depend on isVisible to maybe adjust polling rate? Simplified for now.
-
-    const dismiss = () => {
-        setIsVisible(false);
-        // Optionally tell backend to clear cache? Not necessary.
-    };
+        return () => {
+            if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+            if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
+        };
+    }, [baseUrl, clearProgress, pollKey, isVisible]);
 
     return { progress, isVisible, dismiss };
 }
+

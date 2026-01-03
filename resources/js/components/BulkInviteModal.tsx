@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Role } from '@/types/role';
 import { useRole } from '@/components/role-guard';
+import { triggerBulkInviteProgress } from '@/hooks/use-bulk-invite-progress';
 
 interface PermissionGroup {
     id: number;
@@ -113,6 +114,8 @@ export function BulkInviteModal({ isOpen, onClose, permissionGroups = [] }: Bulk
         router.post(`${baseUrl}/invitations/bulk`, formData, {
             forceFormData: true,
             onSuccess: () => {
+                // Trigger the progress widget immediately
+                triggerBulkInviteProgress();
                 onClose();
                 setContactedFile(null);
             },
