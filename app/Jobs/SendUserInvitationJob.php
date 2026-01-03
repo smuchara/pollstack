@@ -37,7 +37,8 @@ class SendUserInvitationJob implements ShouldQueue
         public int $invitationId,
         public ?int $invitedBy = null,
         public ?int $batchTotal = null
-    ) {}
+    ) {
+    }
 
     /**
      * Execute the job.
@@ -47,7 +48,7 @@ class SendUserInvitationJob implements ShouldQueue
         // Fetch the invitation fresh from the database
         $invitation = UserInvitation::with('inviter')->find($this->invitationId);
 
-        if (! $invitation) {
+        if (!$invitation) {
             \Log::error('SendUserInvitationJob: Invitation not found', [
                 'invitation_id' => $this->invitationId,
             ]);
@@ -84,29 +85,39 @@ class SendUserInvitationJob implements ShouldQueue
 
         // Update bulk invite progress if this is part of a batch
         if ($this->invitedBy !== null && $this->batchTotal !== null) {
-            $this->updateBulkProgress();
+            $this->updateBulkProgress(true);
         }
     }
 
     /**
      * Update the bulk invite progress after sending an email.
      */
-    protected function updateBulkProgress(): void
+    protected function updateBulkProgress(bool $success): void
     {
         $cacheKey = "bulk_invite_progress_{$this->invitedBy}";
         $progress = Cache::get($cacheKey);
 
         if ($progress) {
-            $sent = ($progress['sent'] ?? 0) + 1;
+            $sent = $progress['sent'] ?? 0;
+            $failed = $progress['failed'] ?? 0;
+
+            if ($success) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+
+            $processed = ($progress['processed'] ?? 0) + 1;
             $total = $progress['total'] ?? $this->batchTotal;
 
             $newProgress = array_merge($progress, [
                 'sent' => $sent,
-                'processed' => $sent,
+                'failed' => $failed,
+                'processed' => $processed,
             ]);
 
-            // Check if all emails have been sent
-            if ($sent >= $total) {
+            // Check if all emails have been processed (sent or failed)
+            if ($processed >= $total) {
                 $newProgress['status'] = 'completed';
                 Cache::put($cacheKey, $newProgress, 120);
             } else {
@@ -127,7 +138,7 @@ class SendUserInvitationJob implements ShouldQueue
 
         // Still update progress on failure so counter stays accurate
         if ($this->invitedBy !== null && $this->batchTotal !== null) {
-            $this->updateBulkProgress();
+            $this->updateBulkProgress(false);
         }
     }
 }
