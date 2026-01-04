@@ -18,7 +18,7 @@ export default function Appearance() {
     ];
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} scrollable={false}>
             <Head title="Appearance settings" />
 
             <SettingsLayout>

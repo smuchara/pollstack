@@ -8,13 +8,22 @@ import { type PropsWithChildren } from 'react';
 export default function AppSidebarLayout({
     children,
     breadcrumbs = [],
-}: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[] }>) {
+    scrollable = true,
+}: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[]; scrollable?: boolean }>) {
     return (
-        <AppShell variant="sidebar">
+        <AppShell variant="sidebar" className="h-svh overflow-hidden">
             <AppSidebar />
-            <AppContent variant="sidebar" className="overflow-x-hidden">
+            <AppContent
+                variant="sidebar"
+                className="h-full min-h-0 overflow-hidden flex flex-col"
+            >
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
-                {children}
+                <div
+                    className={`flex-1 overflow-x-hidden ${scrollable ? 'overflow-y-auto' : 'overflow-hidden'
+                        }`}
+                >
+                    {children}
+                </div>
             </AppContent>
         </AppShell>
     );

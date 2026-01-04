@@ -1,151 +1,78 @@
-import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, Link, usePage, router } from '@inertiajs/react';
-import { useState } from 'react';
-import toast from 'react-hot-toast';
-
 import DeleteUser from '@/components/delete-user';
 import HeadingSmall from '@/components/heading-small';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { send } from '@/routes/verification';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, usePage } from '@inertiajs/react';
 import ProfilePhotoForm from './profile-photo-form';
+import TwoFactorAuthenticationForm from './partials/two-factor-authentication-form';
+import UpdateEmailForm from './partials/update-email-form';
+import UpdatePasswordForm from './partials/update-password-form';
+import UpdateProfileInformationForm from './partials/update-profile-information-form';
+
+interface ProfileProps {
+    mustVerifyEmail: boolean;
+    status?: string;
+    twoFactorEnabled: boolean;
+    requiresConfirmation: boolean;
+}
 
 export default function Profile({
     mustVerifyEmail,
     status,
-}: {
-    mustVerifyEmail: boolean;
-    status?: string;
-}) {
+    twoFactorEnabled,
+    requiresConfirmation,
+}: ProfileProps) {
     const { auth, url } = usePage<SharedData & { url: string }>().props;
-    const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // Dynamic breadcrumbs based on current URL
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'Profile settings',
+            title: 'Account Settings',
             href: url || '/settings/profile',
         },
     ];
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setProcessing(true);
-        setErrors({});
-
-        const formData = new FormData(e.currentTarget);
-
-        router.patch(url || '/settings/profile', Object.fromEntries(formData), {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success('Profile updated successfully');
-                setProcessing(false);
-            },
-            onError: (errors) => {
-                setErrors(errors as Record<string, string>);
-                setProcessing(false);
-            },
-        });
-    };
-
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Profile settings" />
+        <AppLayout breadcrumbs={breadcrumbs} scrollable={false}>
+            <Head title="Account Settings" />
 
             <SettingsLayout>
-                <div className="space-y-6">
-                    <HeadingSmall
-                        title="Profile information"
-                        description="Update your name and email address"
-                    />
+                <div className="space-y-10">
+                    {/* My Profile Section */}
+                    <div className="space-y-6">
+                        <HeadingSmall title="My Profile" />
+                        <div className="flex flex-col gap-6">
+                            <ProfilePhotoForm user={auth.user} />
+                            <UpdateProfileInformationForm />
+                        </div>
+                    </div>
 
-                    <ProfilePhotoForm user={auth.user} />
+                    <Separator />
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
-
-                            <Input
-                                id="name"
-                                className="mt-1 block w-full"
-                                defaultValue={auth.user.name}
-                                name="name"
-                                required
-                                autoComplete="name"
-                                placeholder="Full name"
-                            />
-
-                            <InputError
-                                className="mt-2"
-                                message={errors.name}
+                    {/* Account Security Section */}
+                    <div className="space-y-6">
+                        <HeadingSmall title="Account Security" />
+                        <div className="space-y-8">
+                            <UpdateEmailForm />
+                            <UpdatePasswordForm />
+                            <TwoFactorAuthenticationForm
+                                requiresConfirmation={requiresConfirmation}
+                                twoFactorEnabled={twoFactorEnabled}
                             />
                         </div>
+                    </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email address</Label>
+                    <Separator />
 
-                            <Input
-                                id="email"
-                                type="email"
-                                className="mt-1 block w-full"
-                                defaultValue={auth.user.email}
-                                name="email"
-                                required
-                                autoComplete="username"
-                                placeholder="Email address"
-                            />
-
-                            <InputError
-                                className="mt-2"
-                                message={errors.email}
-                            />
+                    {/* Support Access Section */}
+                    <div className="space-y-6">
+                        <HeadingSmall title="Support Access" />
+                        <div className="space-y-6">
+                            <DeleteUser />
                         </div>
-
-                        {mustVerifyEmail &&
-                            auth.user.email_verified_at === null && (
-                                <div>
-                                    <p className="-mt-4 text-sm text-muted-foreground">
-                                        Your email address is
-                                        unverified.{' '}
-                                        <Link
-                                            href={send()}
-                                            as="button"
-                                            className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                                        >
-                                            Click here to resend the
-                                            verification email.
-                                        </Link>
-                                    </p>
-
-                                    {status ===
-                                        'verification-link-sent' && (
-                                            <div className="mt-2 text-sm font-medium text-green-600">
-                                                A new verification link has
-                                                been sent to your email
-                                                address.
-                                            </div>
-                                        )}
-                                </div>
-                            )}
-
-                        <div className="flex items-center gap-4">
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                                data-test="update-profile-button"
-                            >
-                                {processing ? 'Saving...' : 'Save'}
-                            </Button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
-
-                <DeleteUser />
             </SettingsLayout>
         </AppLayout>
     );
