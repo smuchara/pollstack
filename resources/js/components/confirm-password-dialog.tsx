@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { router } from '@inertiajs/react';
+import axios, { AxiosError } from 'axios';
 import { useState } from 'react';
 
 interface ConfirmPasswordDialogProps {
@@ -38,25 +38,23 @@ export function ConfirmPasswordDialog({
         setError(null);
         setProcessing(true);
 
-        router.post(
-            '/user/confirm-password',
-            { password },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setPassword('');
-                    setError(null);
-                    onClose();
-                    onConfirmed();
-                },
-                onError: (errors) => {
-                    setError(errors.password || 'The password is incorrect.');
-                },
-                onFinish: () => {
-                    setProcessing(false);
-                },
-            }
-        );
+        axios.post('/user/confirm-password', { password })
+            .then(() => {
+                setPassword('');
+                setError(null);
+                onClose();
+                onConfirmed();
+            })
+            .catch((error: AxiosError<{ errors?: { password?: string[] } }>) => {
+                if (error.response?.data?.errors?.password) {
+                    setError(error.response.data.errors.password[0]);
+                } else {
+                    setError('The password is incorrect.');
+                }
+            })
+            .finally(() => {
+                setProcessing(false);
+            });
     };
 
     const handleOpenChange = (open: boolean) => {

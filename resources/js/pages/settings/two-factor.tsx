@@ -9,6 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { ShieldBan, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
@@ -53,16 +54,18 @@ export default function TwoFactor({
     const handlePasswordConfirmed = () => {
         // Password confirmed, now enable 2FA
         setProcessingEnable(true);
-        router.post('/user/two-factor-authentication', {}, {
-            preserveScroll: true,
-            onSuccess: () => {
+        axios.post('/user/two-factor-authentication')
+            .then(() => {
                 setShowSetupModal(true);
-            },
-            onFinish: () => {
+            })
+            .catch(() => {
+                // handle error if needed, maybe show a toast
+            })
+            .finally(() => {
                 setProcessingEnable(false);
-            },
-        });
+            });
     };
+
 
     const handleDisable = () => {
         setProcessingDisable(true);
