@@ -25,4 +25,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings/two-factor', [TwoFactorAuthenticationController::class, 'show'])
         ->name('two-factor.show');
+
+    Route::post('settings/profile-photo', [\App\Http\Controllers\Settings\ProfilePhotoController::class, 'update'])
+        ->name('current-user-photo.update');
+
+    Route::delete('settings/profile-photo', [\App\Http\Controllers\Settings\ProfilePhotoController::class, 'destroy'])
+        ->name('current-user-photo.destroy');
 });

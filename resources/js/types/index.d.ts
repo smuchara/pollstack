@@ -44,6 +44,8 @@ export interface User {
     email: string;
     avatar?: string;
     email_verified_at: string | null;
+    profile_photo_url?: string;
+    profile_photo_path?: string;
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;

@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use App\Traits\HasProfilePhoto;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, Notifiable, TwoFactorAuthenticatable, HasProfilePhoto;
 
     /**
      * The attributes that are mass assignable.
@@ -27,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'organization_id',
         'email_verified_at',
+        'profile_photo_path',
     ];
 
     /**
@@ -39,6 +41,15 @@ class User extends Authenticatable implements MustVerifyEmail
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'profile_photo_url',
     ];
 
     /**
@@ -111,7 +122,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
         // Demote admin to user if they have no permissions
         // Note: We only demote 'admin', not 'client_super_admin' (handled by guard above)
-        if ($this->role === Role::ADMIN && ! $hasAnyPermissions) {
+        if ($this->role === Role::ADMIN && !$hasAnyPermissions) {
             $this->update(['role' => Role::USER]);
         }
     }
@@ -244,7 +255,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function hasAllPermissions(array $permissions): bool
     {
         foreach ($permissions as $permission) {
-            if (! $this->hasPermission($permission)) {
+            if (!$this->hasPermission($permission)) {
                 return false;
             }
         }

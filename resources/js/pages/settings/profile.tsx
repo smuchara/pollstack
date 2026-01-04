@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { send } from '@/routes/verification';
+import ProfilePhotoForm from './profile-photo-form';
 
 export default function Profile({
     mustVerifyEmail,
@@ -62,6 +63,8 @@ export default function Profile({
                         title="Profile information"
                         description="Update your name and email address"
                     />
+
+                    <ProfilePhotoForm user={auth.user} />
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid gap-2">

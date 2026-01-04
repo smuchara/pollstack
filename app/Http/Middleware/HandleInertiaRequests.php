@@ -58,6 +58,8 @@ class HandleInertiaRequests extends Middleware
                     'is_user' => $user->isUser(),
                     'permissions' => $user->getAllPermissions(),
                     'organization_id' => $user->organization_id,
+                    'profile_photo_url' => $user->profile_photo_url,
+                    'profile_photo_path' => $user->profile_photo_path,
                 ] : null,
             ],
             // Share organization slug from route parameter for tenant context
@@ -65,7 +67,7 @@ class HandleInertiaRequests extends Middleware
             'organization_slug' => app()->bound('organization')
                 ? app('organization')->slug
                 : $request->route('organization_slug'),
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
