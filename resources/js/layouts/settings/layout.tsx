@@ -1,6 +1,4 @@
 import Heading from '@/components/heading';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { cn, isSameUrl, resolveUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
@@ -10,7 +8,7 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 
-const sidebarNavItems: NavItem[] = [
+const tabNavItems: NavItem[] = [
     {
         title: 'Profile',
         href: edit(),
@@ -48,41 +46,40 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 description="Manage your profile and account settings"
             />
 
-            <div className="flex flex-col lg:flex-row lg:space-x-12">
-                <aside className="w-full max-w-xl lg:w-48">
-                    <nav className="flex flex-col space-y-1 space-x-0">
-                        {sidebarNavItems.map((item, index) => (
-                            <Button
+            {/* Horizontal Tab Navigation */}
+            <nav className="mb-6 border-b border-border">
+                <div className="flex space-x-1 overflow-x-auto">
+                    {tabNavItems.map((item, index) => {
+                        const isActive = isSameUrl(currentPath, item.href);
+                        return (
+                            <Link
                                 key={`${resolveUrl(item.href)}-${index}`}
-                                size="sm"
-                                variant="ghost"
-                                asChild
-                                className={cn('w-full justify-start', {
-                                    'bg-muted': isSameUrl(
-                                        currentPath,
-                                        item.href,
-                                    ),
-                                })}
+                                href={item.href}
+                                className={cn(
+                                    'relative px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
+                                    'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                                    isActive
+                                        ? 'text-foreground'
+                                        : 'text-muted-foreground',
+                                )}
                             >
-                                <Link href={item.href}>
-                                    {item.icon && (
-                                        <item.icon className="h-4 w-4" />
-                                    )}
-                                    {item.title}
-                                </Link>
-                            </Button>
-                        ))}
-                    </nav>
-                </aside>
-
-                <Separator className="my-6 lg:hidden" />
-
-                <div className="flex-1 md:max-w-2xl">
-                    <section className="max-w-xl space-y-12">
-                        {children}
-                    </section>
+                                {item.title}
+                                {isActive && (
+                                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                                )}
+                            </Link>
+                        );
+                    })}
                 </div>
+            </nav>
+
+            {/* Content Area */}
+            <div className="max-w-2xl">
+                <section className="space-y-8">
+                    {children}
+                </section>
             </div>
         </div>
     );
 }
+

@@ -2,14 +2,15 @@
 
 namespace App\Jobs;
 
+use App\Mail\UserInvitationMail;
 use App\Models\UserInvitation;
-use App\Notifications\UserInvitationNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 
 class SendUserInvitationJob implements ShouldQueue
 {
@@ -17,23 +18,25 @@ class SendUserInvitationJob implements ShouldQueue
 
     /**
      * The number of times the job may be attempted.
-     *
-     * @var int
      */
-    public $tries = 3;
+    public int $tries = 3;
 
     /**
      * The number of seconds to wait before retrying the job.
-     *
-     * @var int
      */
-    public $backoff = 60;
+    public int $backoff = 60;
 
     /**
      * Create a new job instance.
+     *
+     * @param  int  $invitationId  The invitation ID to send
+     * @param  int|null  $invitedBy  User ID who initiated bulk invite (null for single invites)
+     * @param  int|null  $batchTotal  Total count in batch (null for single invites)
      */
     public function __construct(
-        public UserInvitation $invitation
+        public int $invitationId,
+        public ?int $invitedBy = null,
+        public ?int $batchTotal = null
     ) {}
 
     /**
@@ -41,9 +44,85 @@ class SendUserInvitationJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // Send notification to the invited email
-        Notification::route('mail', $this->invitation->email)
-            ->notify(new UserInvitationNotification($this->invitation));
+        // Fetch the invitation fresh from the database
+        $invitation = UserInvitation::with('inviter')->find($this->invitationId);
+
+        if (! $invitation) {
+            \Log::error('SendUserInvitationJob: Invitation not found', [
+                'invitation_id' => $this->invitationId,
+            ]);
+
+            return;
+        }
+
+        $recipientEmail = $invitation->email;
+
+        \Log::info('SendUserInvitationJob: Starting', [
+            'invitation_id' => $this->invitationId,
+            'recipient' => $recipientEmail,
+        ]);
+
+        try {
+            // Create a fresh Mailable instance for this specific recipient
+            $mailable = new UserInvitationMail($invitation);
+
+            // Send to the specific email address
+            Mail::to($recipientEmail)->send($mailable);
+
+            \Log::info('SendUserInvitationJob: Email sent successfully', [
+                'invitation_id' => $this->invitationId,
+                'recipient' => $recipientEmail,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('SendUserInvitationJob: Failed to send email', [
+                'invitation_id' => $this->invitationId,
+                'recipient' => $recipientEmail,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+
+        // Update bulk invite progress if this is part of a batch
+        if ($this->invitedBy !== null && $this->batchTotal !== null) {
+            $this->updateBulkProgress(true);
+        }
+    }
+
+    /**
+     * Update the bulk invite progress after sending an email.
+     */
+    protected function updateBulkProgress(bool $success): void
+    {
+        $cacheKey = "bulk_invite_progress_{$this->invitedBy}";
+        $progress = Cache::get($cacheKey);
+
+        if ($progress) {
+            $sent = $progress['sent'] ?? 0;
+            $failed = $progress['failed'] ?? 0;
+
+            if ($success) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+
+            $processed = ($progress['processed'] ?? 0) + 1;
+            $total = $progress['total'] ?? $this->batchTotal;
+
+            $newProgress = array_merge($progress, [
+                'sent' => $sent,
+                'failed' => $failed,
+                'processed' => $processed,
+            ]);
+
+            // Check if all emails have been processed (sent or failed)
+            if ($processed >= $total) {
+                $newProgress['status'] = 'completed';
+                Cache::put($cacheKey, $newProgress, 120);
+            } else {
+                Cache::put($cacheKey, $newProgress, 3600);
+            }
+        }
     }
 
     /**
@@ -51,11 +130,14 @@ class SendUserInvitationJob implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
-        // Log the failure or notify administrators
-        \Log::error('Failed to send invitation', [
-            'invitation_id' => $this->invitation->id,
-            'email' => $this->invitation->email,
+        \Log::error('SendUserInvitationJob: Job failed', [
+            'invitation_id' => $this->invitationId,
             'error' => $exception->getMessage(),
         ]);
+
+        // Still update progress on failure so counter stays accurate
+        if ($this->invitedBy !== null && $this->batchTotal !== null) {
+            $this->updateBulkProgress(false);
+        }
     }
 }

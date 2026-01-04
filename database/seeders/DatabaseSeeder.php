@@ -60,8 +60,5 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-
-        // Optionally create additional random users
-        // User::factory(10)->create();
     }
 }

@@ -1,6 +1,4 @@
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
     SidebarContent,
@@ -11,25 +9,14 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import { type NavItem, type SharedData } from '@/types';
+import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
-import { BarChart3, BookOpen, Folder, LayoutGrid, UserPlus, Users } from 'lucide-react';
+import { BarChart3, LayoutGrid, Settings, UserPlus, Users } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
+
 
 export function AppSidebar() {
     const { auth, organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
@@ -54,87 +41,112 @@ export function AppSidebar() {
         return dashboard().url;
     }, [user, organization_slug, tenantBaseUrl]);
 
-    // Build navigation items based on user role
-    const mainNavItems: NavItem[] = useMemo(() => {
-        const items: NavItem[] = [
-            {
-                title: 'Dashboard',
-                href: dashboardUrl,
-                icon: LayoutGrid,
-            },
-        ];
+    // Build navigation groups based on user role
+    const navGroups = useMemo(() => {
+        const groups: NavGroup[] = [];
 
-        // Add Polls link - separate voting and management for admins
+        // General group - always present
+        groups.push({
+            title: 'General',
+            items: [
+                {
+                    title: 'Dashboard',
+                    href: dashboardUrl,
+                    icon: LayoutGrid,
+                },
+            ],
+        });
+
+        // Polls group
+        const pollItems: NavItem[] = [];
         if (user?.is_admin && !user?.is_super_admin && organization_slug) {
-            // Organization admins get both voting and management (organization-scoped)
-            items.push({
+            pollItems.push({
                 title: 'Poll Voting',
                 href: `${tenantBaseUrl}/polls-voting`,
                 icon: BarChart3,
             });
-            items.push({
+            pollItems.push({
                 title: 'Poll Management',
                 href: `${tenantBaseUrl}/polls-management`,
                 icon: BarChart3,
             });
-        } else if (!user?.is_super_admin) {
-            // Regular users only get voting (global)
-            items.push({
+        } else if (user?.is_super_admin) {
+            pollItems.push({
+                title: 'Poll Voting',
+                href: '/polls',
+                icon: BarChart3,
+            });
+            pollItems.push({
+                title: 'Poll Management',
+                href: '/super-admin/polls',
+                icon: BarChart3,
+            });
+        } else {
+            pollItems.push({
                 title: 'Polls',
                 href: '/polls',
                 icon: BarChart3,
             });
         }
-        // Note: Super admins get their links added below
+        if (pollItems.length > 0) {
+            groups.push({
+                title: 'Polls',
+                items: pollItems,
+            });
+        }
 
-        // Add User Management for admins (tenant-aware) and super admins
+        // Users group
+        const userItems: NavItem[] = [];
         if (user?.is_admin && !user?.is_super_admin) {
-            items.push({
+            userItems.push({
                 title: 'User Management',
                 href: `${tenantBaseUrl}/users`,
                 icon: Users,
             });
         }
-
-        // Super admin items (global, not tenant-specific)
         if (user?.is_super_admin) {
-            items.push({
-                title: 'Poll Voting',
-                href: '/polls',
-                icon: BarChart3,
-            });
-            items.push({
+            userItems.push({
                 title: 'User Management',
                 href: '/super-admin/users',
                 icon: Users,
             });
-            items.push({
-                title: 'Poll Management',
-                href: '/super-admin/polls',
-                icon: BarChart3,
-            });
-            items.push({
+            userItems.push({
                 title: 'Onboarding',
                 href: '/super-admin/onboarding',
                 icon: UserPlus,
             });
-            items.push({
-                title: 'System Configuration',
-                href: '/super-admin/permission-groups', // Temporary link until config page exists
-                icon: Users, // Using Users/Settings icon
+        }
+        if (userItems.length > 0) {
+            groups.push({
+                title: 'Users',
+                items: userItems,
             });
         }
 
-        // Client Admin items
+        // Administration group
+        const adminItems: NavItem[] = [];
+        if (user?.is_super_admin) {
+            adminItems.push({
+                title: 'System Configuration',
+                href: '/super-admin/permission-groups',
+                icon: Settings,
+            });
+        }
         if (user?.is_admin && !user?.is_super_admin) {
-            items.push({
+            adminItems.push({
                 title: 'System Configuration',
                 href: `${tenantBaseUrl}/permission-groups`,
-                icon: Users,
+                icon: Settings,
+            });
+        }
+        if (adminItems.length > 0) {
+            groups.push({
+                title: 'Administration',
+                items: adminItems,
             });
         }
 
-        return items;
+        return groups;
     }, [user, dashboardUrl, tenantBaseUrl, organization_slug]);
 
     return (
@@ -152,13 +164,10 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain groups={navGroups} />
             </SidebarContent>
 
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
-                <NavUser />
-            </SidebarFooter>
+            <SidebarFooter />
         </Sidebar>
     );
 }

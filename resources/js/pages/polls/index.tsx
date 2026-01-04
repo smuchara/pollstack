@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CheckCircle2, Circle, Clock, PieChart, Vote, XCircle } from 'lucide-react';
+import { CheckCircle2, PieChart, Vote, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import AppLayout from '@/layouts/app-layout';

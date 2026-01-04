@@ -11,10 +11,20 @@ import { TipsDialog } from '@/components/ui/tips-dialog';
 import { RoleBadge } from '@/components/ui/role-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { InviteUsersModal } from '@/components/invite-users-modal';
+import { BulkInviteModal } from '@/components/BulkInviteModal';
+import { Upload } from 'lucide-react';
 
 // Types
 import { Role } from '@/types/role';
 import { type BreadcrumbItem, type SharedData } from '@/types';
+
+interface PermissionGroup {
+  id: number;
+  name: string;
+  label: string;
+  scope: 'system' | 'client';
+  description?: string;
+}
 
 interface User {
   id: number;
@@ -28,11 +38,9 @@ interface User {
     name: string;
     slug: string;
   };
-  permission_groups?: {
-    id: number;
-    name: string;
-    label: string;
-  }[];
+  permission_groups?: PermissionGroup[];
+  status?: 'invited' | 'verified' | 'pending';
+  is_invitation?: boolean;
 }
 
 interface Props {
@@ -45,18 +53,38 @@ interface Props {
     from: number;
     to: number;
   };
-  permission_groups?: {
-    id: number;
-    name: string;
-    label: string;
-    description?: string;
-  }[];
+  permission_groups?: PermissionGroup[];
 }
 
-export default function UsersList({ users, pagination, permission_groups = [] }: Props) {
+interface PendingInvitation {
+  id: number;
+  name?: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
+
+export default function UsersList({ users, pagination, permission_groups = [], pendingInvitations = [] }: Props & { pendingInvitations?: PendingInvitation[] }) {
   const { isSuperAdmin, isClientSuperAdmin, hasRole, isAdmin } = useRole();
   const { auth, organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
   const user = auth?.user;
+
+  // Merge pending invitations with users
+  const allUsers: User[] = [
+    ...pendingInvitations.map(inv => ({
+      id: inv.id, // Ensure this doesn't conflict with real IDs if keys matter, maybe prefix? But id is number. 
+      // We can use negative IDs for invitations to avoid conflict if needed, or just assume they are unique enough or handled.
+      // Actually best to treat them distinct, but for DataTable they need to be same shape.
+      name: inv.name || 'Invited User',
+      email: inv.email,
+      role: inv.role,
+      email_verified_at: null,
+      created_at: inv.created_at,
+      status: 'invited' as const,
+      is_invitation: true,
+    })),
+    ...users
+  ];
 
   // Build base URL for tenant context or super admin
   const baseUrl = user?.is_super_admin
@@ -71,6 +99,7 @@ export default function UsersList({ users, pagination, permission_groups = [] }:
   });
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isBulkInviteModalOpen, setIsBulkInviteModalOpen] = useState(false);
 
   const dashboardUrl = user?.is_super_admin
     ? '/super-admin/dashboard'
@@ -179,6 +208,7 @@ export default function UsersList({ users, pagination, permission_groups = [] }:
         <StatusBadge
           verified={!!row.original.email_verified_at}
           date={row.original.email_verified_at || undefined}
+          status={row.original.status}
         />
       ),
     },
@@ -226,10 +256,17 @@ export default function UsersList({ users, pagination, permission_groups = [] }:
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleDelete(row.original);
+                // If invitation, we might need a different delete route (cancel invitation)
+                if (row.original.is_invitation) {
+                  if (confirm(`Cancel invitation for ${row.original.email}?`)) {
+                    router.delete(`${baseUrl}/invitations/${row.original.id}`, { preserveScroll: true });
+                  }
+                } else {
+                  handleDelete(row.original);
+                }
               }}
               className="group rounded-md p-1.5 text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-600"
-              title="Delete User"
+              title={row.original.is_invitation ? "Cancel Invitation" : "Delete User"}
             >
               <Trash2 className="h-4 w-4 transition-transform group-hover:scale-110" />
             </button>
@@ -269,13 +306,22 @@ export default function UsersList({ users, pagination, permission_groups = [] }:
               <TipsDialog title="Table Features Guide" tips={helpTips} />
 
               {isAdmin() && (
-                <button
-                  onClick={() => setIsInviteModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-95"
-                >
-                  <Mail className="h-4 w-4" />
-                  <span>Invite Users</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setIsInviteModalOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-95"
+                  >
+                    <Mail className="h-4 w-4" />
+                    <span>Invite Users</span>
+                  </button>
+                  <button
+                    onClick={() => setIsBulkInviteModalOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-all hover:bg-accent hover:text-accent-foreground active:scale-95 ml-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span>Bulk Invite</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -284,7 +330,7 @@ export default function UsersList({ users, pagination, permission_groups = [] }:
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
             <DataTable
               columns={columns}
-              data={users}
+              data={allUsers}
               pagination={{
                 pageIndex: paginationState.pageIndex,
                 pageSize: paginationState.pageSize,
@@ -303,6 +349,11 @@ export default function UsersList({ users, pagination, permission_groups = [] }:
       <InviteUsersModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
+        permissionGroups={permission_groups}
+      />
+      <BulkInviteModal
+        isOpen={isBulkInviteModalOpen}
+        onClose={() => setIsBulkInviteModalOpen(false)}
         permissionGroups={permission_groups}
       />
     </AppLayout>

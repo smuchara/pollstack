@@ -1,3 +1,4 @@
+import { ConfirmPasswordDialog } from '@/components/confirm-password-dialog';
 import HeadingSmall from '@/components/heading-small';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
@@ -8,6 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { ShieldBan, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,6 +25,7 @@ export default function TwoFactor({
     const { url } = usePage<{ url: string }>().props;
     const [processingEnable, setProcessingEnable] = useState(false);
     const [processingDisable, setProcessingDisable] = useState(false);
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -43,18 +46,26 @@ export default function TwoFactor({
     } = useTwoFactorAuth();
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
 
-    const handleEnable = () => {
-        setProcessingEnable(true);
-        router.post('/user/two-factor-authentication', {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setShowSetupModal(true);
-            },
-            onFinish: () => {
-                setProcessingEnable(false);
-            },
-        });
+    const handleEnableClick = () => {
+        // Show password confirmation dialog first
+        setShowPasswordDialog(true);
     };
+
+    const handlePasswordConfirmed = () => {
+        // Password confirmed, now enable 2FA
+        setProcessingEnable(true);
+        axios.post('/user/two-factor-authentication')
+            .then(() => {
+                setShowSetupModal(true);
+            })
+            .catch(() => {
+                // handle error if needed, maybe show a toast
+            })
+            .finally(() => {
+                setProcessingEnable(false);
+            });
+    };
+
 
     const handleDisable = () => {
         setProcessingDisable(true);
@@ -124,7 +135,7 @@ export default function TwoFactor({
                                     <Button
                                         type="button"
                                         disabled={processingEnable}
-                                        onClick={handleEnable}
+                                        onClick={handleEnableClick}
                                     >
                                         <ShieldCheck />
                                         {processingEnable ? 'Enabling...' : 'Enable 2FA'}
@@ -144,6 +155,14 @@ export default function TwoFactor({
                         clearSetupData={clearSetupData}
                         fetchSetupData={fetchSetupData}
                         errors={errors}
+                    />
+
+                    <ConfirmPasswordDialog
+                        isOpen={showPasswordDialog}
+                        onClose={() => setShowPasswordDialog(false)}
+                        onConfirmed={handlePasswordConfirmed}
+                        title="Confirm your password"
+                        description="For your security, please confirm your password to enable two-factor authentication."
                     />
                 </div>
             </SettingsLayout>

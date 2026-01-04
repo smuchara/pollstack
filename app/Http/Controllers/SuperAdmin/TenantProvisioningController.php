@@ -99,7 +99,7 @@ class TenantProvisioningController extends Controller
             ]);
 
             // Dispatch the job to send the invitation email
-            SendUserInvitationJob::dispatch($invitation);
+            SendUserInvitationJob::dispatch($invitation->id);
 
             return redirect()->back()->with('success', 'Tenant provisioned successfully. An invitation email has been sent to the admin.');
         });

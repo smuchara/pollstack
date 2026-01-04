@@ -58,6 +58,8 @@ class HandleInertiaRequests extends Middleware
                     'is_user' => $user->isUser(),
                     'permissions' => $user->getAllPermissions(),
                     'organization_id' => $user->organization_id,
+                    'profile_photo_url' => $user->profile_photo_url,
+                    'profile_photo_path' => $user->profile_photo_path,
                 ] : null,
             ],
             // Share organization slug from route parameter for tenant context
