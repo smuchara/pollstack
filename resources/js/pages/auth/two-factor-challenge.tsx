@@ -7,7 +7,7 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
-import AuthLayout from '@/layouts/auth-layout';
+import AuthSplitLayout from '@/layouts/auth/auth-split-layout';
 import { store } from '@/routes/two-factor/login';
 import { Form, Head } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
@@ -46,7 +46,7 @@ export default function TwoFactorChallenge() {
     };
 
     return (
-        <AuthLayout
+        <AuthSplitLayout
             title={authConfigContent.title}
             description={authConfigContent.description}
         >
@@ -126,6 +126,6 @@ export default function TwoFactorChallenge() {
                     )}
                 </Form>
             </div>
-        </AuthLayout>
+        </AuthSplitLayout>
     );
 }

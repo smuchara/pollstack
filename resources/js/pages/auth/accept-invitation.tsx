@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/auth-layout';
+import AuthSplitLayout from '@/layouts/auth/auth-split-layout';
 
 interface Invitation {
   token: string;
@@ -56,7 +56,7 @@ export default function AcceptInvitation({ invitation }: Props) {
   });
 
   return (
-    <AuthLayout
+    <AuthSplitLayout
       title="Accept Your Invitation"
       description={`${invitation.inviter.name} has invited you to join PollStack`}
     >
@@ -190,6 +190,6 @@ export default function AcceptInvitation({ invitation }: Props) {
           </TextLink>
         </div>
       </form>
-    </AuthLayout>
+    </AuthSplitLayout>
   );
 }

@@ -18,7 +18,8 @@ class UserInvitationMail extends Mailable
      */
     public function __construct(
         public UserInvitation $invitation
-    ) {}
+    ) {
+    }
 
     /**
      * Get the message envelope.
@@ -40,7 +41,7 @@ class UserInvitationMail extends Mailable
         $expiresAt = $this->invitation->expires_at->diffForHumans();
 
         return new Content(
-            markdown: 'emails.invitation',
+            view: 'emails.invitation',
             with: [
                 'acceptUrl' => $acceptUrl,
                 'inviterName' => $inviterName,

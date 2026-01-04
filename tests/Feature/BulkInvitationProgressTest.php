@@ -28,23 +28,8 @@ it('tracks successful and failed invitations separately in bulk progress', funct
     ], 3600);
 
     // Create invitations
-    $invitation1 = UserInvitation::create([
-        'email' => 'test1@example.com',
-        'token' => 'token1',
-        'invited_by' => $inviterId,
-        'role' => 'user',
-        'organization_id' => 1,
-        'expires_at' => now()->addDays(7),
-    ]);
-
-    $invitation2 = UserInvitation::create([
-        'email' => 'test2@example.com',
-        'token' => 'token2',
-        'invited_by' => $inviterId,
-        'role' => 'user',
-        'organization_id' => 1,
-        'expires_at' => now()->addDays(7),
-    ]);
+    $invitation1 = UserInvitation::factory()->create(['invited_by' => $inviterId]);
+    $invitation2 = UserInvitation::factory()->create(['invited_by' => $inviterId]);
 
     // Process Job 1 (Success)
     $job1 = new SendUserInvitationJob($invitation1->id, $inviterId, $total);
