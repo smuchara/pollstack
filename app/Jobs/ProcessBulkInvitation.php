@@ -27,8 +27,7 @@ class ProcessBulkInvitation implements ShouldQueue
         public int $organizationId,
         public string $role,
         public array $permissionGroupIds = []
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -36,7 +35,7 @@ class ProcessBulkInvitation implements ShouldQueue
     public function handle(): void
     {
         // Check if file exists
-        if (!Storage::exists($this->filePath)) {
+        if (! Storage::exists($this->filePath)) {
             \Log::error("Bulk Invite File not found: {$this->filePath}");
 
             return;
@@ -118,7 +117,7 @@ class ProcessBulkInvitation implements ShouldQueue
                     // Pass batch info so SendUserInvitationJob can update real-time progress
                     SendUserInvitationJob::dispatch($invitation->id, $this->invitedBy, $total);
                 } catch (\Exception $e) {
-                    \Log::error("Failed to invite {$email}: " . $e->getMessage());
+                    \Log::error("Failed to invite {$email}: ".$e->getMessage());
                 }
 
                 $queued++;

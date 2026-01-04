@@ -37,8 +37,7 @@ class SendUserInvitationJob implements ShouldQueue
         public int $invitationId,
         public ?int $invitedBy = null,
         public ?int $batchTotal = null
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -48,7 +47,7 @@ class SendUserInvitationJob implements ShouldQueue
         // Fetch the invitation fresh from the database
         $invitation = UserInvitation::with('inviter')->find($this->invitationId);
 
-        if (!$invitation) {
+        if (! $invitation) {
             \Log::error('SendUserInvitationJob: Invitation not found', [
                 'invitation_id' => $this->invitationId,
             ]);

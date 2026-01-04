@@ -12,7 +12,7 @@ export function FloatingProgressWidget() {
     // Pulse animation when progress updates
     useEffect(() => {
         if (progress && progress.processed > prevProcessedRef.current) {
-            setIsPulsing(true);
+            setTimeout(() => setIsPulsing(true), 0);
             const timer = setTimeout(() => setIsPulsing(false), 300);
             prevProcessedRef.current = progress.processed;
             return () => clearTimeout(timer);
@@ -22,7 +22,7 @@ export function FloatingProgressWidget() {
     // Countdown timer when completed
     useEffect(() => {
         if (progress?.status === 'completed') {
-            setCountdown(5);
+            setTimeout(() => setCountdown(5), 0);
             const timer = setInterval(() => {
                 setCountdown(prev => {
                     if (prev === null || prev <= 1) {
@@ -34,7 +34,7 @@ export function FloatingProgressWidget() {
             }, 1000);
             return () => clearInterval(timer);
         } else {
-            setCountdown(null);
+            setTimeout(() => setCountdown(null), 0);
         }
     }, [progress?.status]);
 
@@ -75,14 +75,14 @@ export function FloatingProgressWidget() {
             {/* Header */}
             <div
                 className={`flex items-center justify-between px-4 py-3 ${isCompleted
-                        ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-b border-green-500/20'
-                        : 'bg-gradient-to-r from-primary/10 to-blue-500/10 border-b border-primary/20'
+                    ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-b border-green-500/20'
+                    : 'bg-gradient-to-r from-primary/10 to-blue-500/10 border-b border-primary/20'
                     }`}
             >
                 <div className="flex items-center gap-3">
                     <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isCompleted
-                            ? 'bg-green-500/20 text-green-600 dark:text-green-400'
-                            : 'bg-primary/20 text-primary'
+                        ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                        : 'bg-primary/20 text-primary'
                         }`}>
                         {isCompleted ? (
                             <CheckCircle className="h-4 w-4" />
@@ -133,8 +133,8 @@ export function FloatingProgressWidget() {
                     <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary/50">
                         <div
                             className={`h-full transition-all duration-500 ease-out rounded-full ${isCompleted
-                                    ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                                    : 'bg-gradient-to-r from-primary to-blue-500'
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                                : 'bg-gradient-to-r from-primary to-blue-500'
                                 }`}
                             style={{ width: `${percentage}%` }}
                         />

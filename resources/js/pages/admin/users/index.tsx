@@ -39,6 +39,8 @@ interface User {
     slug: string;
   };
   permission_groups?: PermissionGroup[];
+  status?: 'invited' | 'verified' | 'pending';
+  is_invitation?: boolean;
 }
 
 interface Props {
@@ -52,10 +54,17 @@ interface Props {
     to: number;
   };
   permission_groups?: PermissionGroup[];
-  permission_groups?: PermissionGroup[];
 }
 
-export default function UsersList({ users, pagination, permission_groups = [], pendingInvitations = [] }: Props & { pendingInvitations?: any[] }) {
+interface PendingInvitation {
+  id: number;
+  name?: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
+
+export default function UsersList({ users, pagination, permission_groups = [], pendingInvitations = [] }: Props & { pendingInvitations?: PendingInvitation[] }) {
   const { isSuperAdmin, isClientSuperAdmin, hasRole, isAdmin } = useRole();
   const { auth, organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
   const user = auth?.user;

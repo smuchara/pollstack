@@ -5,7 +5,6 @@ use App\Jobs\SendUserInvitationJob;
 use App\Models\UserInvitation;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -13,7 +12,9 @@ it('tracks successful and failed invitations separately in bulk progress', funct
     Mail::fake();
 
     // Setup
-    $inviterId = 1;
+    $user = \App\Models\User::factory()->create();
+    $organization = \App\Models\Organization::factory()->create();
+    $inviterId = $user->id;
     $total = 2;
     $cacheKey = "bulk_invite_progress_{$inviterId}";
 
@@ -28,8 +29,14 @@ it('tracks successful and failed invitations separately in bulk progress', funct
     ], 3600);
 
     // Create invitations
-    $invitation1 = UserInvitation::factory()->create(['invited_by' => $inviterId]);
-    $invitation2 = UserInvitation::factory()->create(['invited_by' => $inviterId]);
+    $invitation1 = UserInvitation::factory()->create([
+        'invited_by' => $inviterId,
+        'organization_id' => $organization->id
+    ]);
+    $invitation2 = UserInvitation::factory()->create([
+        'invited_by' => $inviterId,
+        'organization_id' => $organization->id
+    ]);
 
     // Process Job 1 (Success)
     $job1 = new SendUserInvitationJob($invitation1->id, $inviterId, $total);
@@ -39,7 +46,7 @@ it('tracks successful and failed invitations separately in bulk progress', funct
     // We simulate failure by forcing throw in Mail or by mocking the job's behavior if we can't easily force Mail::send to throw inside the job without mocking Mail specificially for one call.
     // Easier way: Partial mock of the job logic or just ensure the job handles exceptions.
     // The UpdateBulkProgress is protected, so we can't call it directly.
-    // We will use the 'failed' method of the job which is called by the queue worker, 
+    // We will use the 'failed' method of the job which is called by the queue worker,
     // BUT we can also manually call it or simulate the exception flow if we want to test handle() catching it.
     // The current code re-throws the exception in handle().
 
@@ -66,9 +73,9 @@ it('tracks successful and failed invitations separately in bulk progress', funct
     expect($progress['sent'])->toBe(1)
         ->and($progress['processed'])->toBe(2);
 
-    // This assertion will fail before our fix because 'failed' key is missing or not updated, 
+    // This assertion will fail before our fix because 'failed' key is missing or not updated,
     // and 'sent' might be wrongly incremented if the code was blindly incrementing (but it increments at end of handle, so exception prevents it).
-    // EXCEPT: The user said "shows messages are sent". 
+    // EXCEPT: The user said "shows messages are sent".
     // In the original code:
     // try { Mail::send... Log::info... } catch { Log::error... throw $e; }
     // The updateBulkProgress() calls are at the END of handle(), outside try/catch?

@@ -119,7 +119,7 @@ export function BulkInviteModal({ isOpen, onClose, permissionGroups = [] }: Bulk
                 onClose();
                 setContactedFile(null);
             },
-            onError: (errs: any) => {
+            onError: (errs: Record<string, string>) => {
                 setErrors(errs);
             },
             onFinish: () => {

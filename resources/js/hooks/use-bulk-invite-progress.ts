@@ -47,7 +47,7 @@ export function useBulkInviteProgress() {
         }
         try {
             await axios.delete(`${baseUrl}/invitations/bulk/progress`);
-        } catch (error) {
+        } catch {
             // Ignore errors
         }
         sessionStorage.removeItem(BULK_INVITE_ACTIVE_KEY);
@@ -77,9 +77,11 @@ export function useBulkInviteProgress() {
     // Check on mount for active session
     useEffect(() => {
         if (sessionStorage.getItem(BULK_INVITE_ACTIVE_KEY) === 'true') {
-            setIsVisible(true);
-            setProgress({ total: 0, processed: 0, status: 'processing' });
-            setPollKey(prev => prev + 1);
+            setTimeout(() => {
+                setIsVisible(true);
+                setProgress({ total: 0, processed: 0, status: 'processing' });
+                setPollKey(prev => prev + 1);
+            }, 0);
         }
     }, []);
 
