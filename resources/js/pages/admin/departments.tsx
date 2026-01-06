@@ -1,6 +1,6 @@
 import { Head, usePage, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Building2, Users, Search, X, UserPlus, UserMinus } from 'lucide-react';
+import { Plus, Edit, Trash2, Building2, Users, Search, UserMinus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Components
@@ -30,7 +30,6 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PageHeader, EmptyState } from '@/components/common';
-import { Checkbox } from '@/components/ui/checkbox';
 
 // Types
 import type { BreadcrumbItem } from '@/types';
@@ -68,9 +67,7 @@ export default function DepartmentsIndex({ departments }: Props) {
     const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
     const [departmentToManageUsers, setDepartmentToManageUsers] = useState<Department | null>(null);
     const [departmentUsers, setDepartmentUsers] = useState<User[]>([]);
-    const [allUsers, setAllUsers] = useState<User[]>([]);
     const [userSearchQuery, setUserSearchQuery] = useState('');
-    const [selectedUsersToAdd, setSelectedUsersToAdd] = useState<number[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
 
     const form = useForm({
@@ -133,7 +130,6 @@ export default function DepartmentsIndex({ departments }: Props) {
     const handleManageUsers = async (department: Department) => {
         setDepartmentToManageUsers(department);
         setLoadingUsers(true);
-        setSelectedUsersToAdd([]);
         setUserSearchQuery('');
 
         try {
@@ -141,13 +137,7 @@ export default function DepartmentsIndex({ departments }: Props) {
             const deptResponse = await fetch(`/organization/${orgSlug}/admin/departments/${department.id}/users`);
             const deptData = await deptResponse.json();
             setDepartmentUsers(deptData.users || []);
-
-            // Fetch all users for adding
-            const usersResponse = await fetch(`/organization/${orgSlug}/admin/departments/list`);
-            const usersData = await usersResponse.json();
-            // We need to get all org users - let's use a different approach
-            // For now, we'll show existing users and allow removal
-        } catch (error) {
+        } catch {
             toast.error('Failed to load users');
         } finally {
             setLoadingUsers(false);

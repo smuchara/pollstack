@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useForm, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import { useForm, router } from '@inertiajs/react';
 import { Plus, Trash2, Calendar, Lock, Globe, Clock, AlignLeft, List, Users, Building2, Eye, EyeOff, Zap, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { localToUTC, utcToLocalInput } from '@/lib/date-utils';
@@ -82,61 +82,67 @@ export default function CreatePollModal({
     users = [],
 }: CreatePollModalProps) {
     // Initialize options based on poll or default
-    const [options, setOptions] = useState<PollOption[]>(
-        poll?.options?.map((o) => ({ text: o.text })) || [{ text: '' }, { text: '' }]
-    );
+    const [options, setOptions] = useState<PollOption[]>([{ text: '' }, { text: '' }]);
 
     // Invitation states
-    const [selectedDepartments, setSelectedDepartments] = useState<number[]>(
-        poll?.invited_departments?.map((d) => d.id) || []
-    );
-    const [selectedUsers, setSelectedUsers] = useState<number[]>(
-        poll?.invited_users?.map((u) => u.id) || []
-    );
+    const [selectedDepartments, setSelectedDepartments] = useState<number[]>([]);
+    const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [userSearchQuery, setUserSearchQuery] = useState('');
+    
+    // Track which poll we last synced to avoid re-syncing
+    const [lastSyncedPollId, setLastSyncedPollId] = useState<number | undefined>(undefined);
 
     const form = useForm({
-        question: poll?.question || '',
-        description: poll?.description || '',
-        type: poll?.type || 'open',
-        visibility: poll?.visibility || 'public',
-        status: 'active', // Backend will determine actual status based on timing
-        start_at: poll?.start_at ? utcToLocalInput(poll.start_at) : '',
-        end_at: poll?.end_at ? utcToLocalInput(poll.end_at) : '',
-        organization_id: poll?.organization_id || '',
+        question: '',
+        description: '',
+        type: 'open',
+        visibility: 'public',
+        status: 'active',
+        start_at: '',
+        end_at: '',
+        organization_id: '',
         options: [] as PollOption[],
         invite_user_ids: [] as number[],
         invite_department_ids: [] as number[],
     });
 
-    // Reset form when poll changes
-    useEffect(() => {
-        if (poll && isOpen) {
-            form.setData({
-                question: poll.question,
-                description: poll.description || '',
-                type: poll.type,
-                visibility: poll.visibility || 'public',
-                status: 'active',
-                start_at: poll.start_at ? utcToLocalInput(poll.start_at) : '',
-                end_at: poll.end_at ? utcToLocalInput(poll.end_at) : '',
-                organization_id: poll.organization_id || '',
-                options: [],
-                invite_user_ids: [],
-                invite_department_ids: [],
-            });
-            setOptions(poll.options?.map((o) => ({ text: o.text })) || [{ text: '' }, { text: '' }]);
-            setSelectedDepartments(poll.invited_departments?.map((d) => d.id) || []);
-            setSelectedUsers(poll.invited_users?.map((u) => u.id) || []);
-        }
-    }, [poll, isOpen]);
+    // Sync form data when poll changes or modal opens with a different poll
+    const shouldSyncPoll = isOpen && poll && poll.id !== lastSyncedPollId;
+    if (shouldSyncPoll) {
+        form.setData({
+            question: poll.question,
+            description: poll.description || '',
+            type: poll.type,
+            visibility: poll.visibility || 'public',
+            status: 'active',
+            start_at: poll.start_at ? utcToLocalInput(poll.start_at) : '',
+            end_at: poll.end_at ? utcToLocalInput(poll.end_at) : '',
+            organization_id: String(poll.organization_id || ''),
+            options: [],
+            invite_user_ids: [],
+            invite_department_ids: [],
+        });
+        setOptions(poll.options?.map((o) => ({ text: o.text })) || [{ text: '' }, { text: '' }]);
+        setSelectedDepartments(poll.invited_departments?.map((d) => d.id) || []);
+        setSelectedUsers(poll.invited_users?.map((u) => u.id) || []);
+        setLastSyncedPollId(poll.id);
+    }
 
-    // Reset when closing
-    useEffect(() => {
-        if (!isOpen) {
-            setUserSearchQuery('');
-        }
-    }, [isOpen]);
+    // Reset for new poll creation
+    const shouldResetForNewPoll = isOpen && !poll && lastSyncedPollId !== undefined;
+    if (shouldResetForNewPoll) {
+        form.reset();
+        setOptions([{ text: '' }, { text: '' }]);
+        setSelectedDepartments([]);
+        setSelectedUsers([]);
+        setUserSearchQuery('');
+        setLastSyncedPollId(undefined);
+    }
+
+    const handleClose = () => {
+        setUserSearchQuery('');
+        onClose();
+    };
 
     const handleOptionChange = (index: number, value: string) => {
         const newOptions = [...options];
@@ -261,7 +267,7 @@ export default function CreatePollModal({
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent size="2xl" className="max-h-[90vh] overflow-y-auto">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
