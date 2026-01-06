@@ -1,14 +1,12 @@
 import { ConfirmPasswordDialog } from '@/components/confirm-password-dialog';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch'; // Maybe use switch for toggle look? Or stick to buttons as state management is complex
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
-import { usePage, router } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import axios from 'axios';
-import { ShieldBan, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 export default function TwoFactorAuthenticationForm({ requiresConfirmation, twoFactorEnabled }: { requiresConfirmation: boolean, twoFactorEnabled: boolean }) {

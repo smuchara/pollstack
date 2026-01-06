@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 export default function UpdateProfileInformationForm({ className }: { className?: string }) {
     const user = usePage<SharedData>().props.auth.user;
 
-    const { data, setData, patch, errors, processing, recentlySuccessful } = useForm({
+    const { data, setData, patch, errors, processing } = useForm({
         name: user.name,
         email: user.email,
     });

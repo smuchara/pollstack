@@ -12,15 +12,11 @@ import UpdatePasswordForm from './partials/update-password-form';
 import UpdateProfileInformationForm from './partials/update-profile-information-form';
 
 interface ProfileProps {
-    mustVerifyEmail: boolean;
-    status?: string;
     twoFactorEnabled: boolean;
     requiresConfirmation: boolean;
 }
 
 export default function Profile({
-    mustVerifyEmail,
-    status,
     twoFactorEnabled,
     requiresConfirmation,
 }: ProfileProps) {

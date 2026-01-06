@@ -17,7 +17,7 @@ export function FloatingProgressWidget() {
             prevProcessedRef.current = progress.processed;
             return () => clearTimeout(timer);
         }
-    }, [progress?.processed]);
+    }, [progress]);
 
     // Countdown timer when completed
     useEffect(() => {
