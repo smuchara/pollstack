@@ -78,7 +78,7 @@ export default function TwoFactor({
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} scrollable={false}>
             <Head title="Two-Factor Authentication" />
             <SettingsLayout>
                 <div className="space-y-6">

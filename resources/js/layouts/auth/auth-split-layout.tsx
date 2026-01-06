@@ -1,4 +1,6 @@
 import AppLogoIcon from '@/components/app-logo-icon';
+import { Toaster } from '@/components/ui/toaster';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { home } from '@/routes';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
@@ -15,6 +17,7 @@ export default function AuthSplitLayout({
     description,
 }: PropsWithChildren<AuthLayoutProps>) {
     const { name, quote } = usePage<SharedData>().props;
+    useToastNotifications();
 
     return (
         <div className="relative grid min-h-dvh flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0">
@@ -97,6 +100,7 @@ export default function AuthSplitLayout({
                     {children}
                 </div>
             </div>
+            <Toaster />
         </div>
     );
 }

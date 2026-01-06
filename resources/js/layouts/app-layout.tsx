@@ -6,10 +6,11 @@ import { FloatingProgressWidget } from '@/components/FloatingProgressWidget';
 interface AppLayoutProps {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
+    scrollable?: boolean;
 }
 
-export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => (
-    <AppLayoutTemplate breadcrumbs={breadcrumbs} {...props}>
+export default ({ children, breadcrumbs, scrollable, ...props }: AppLayoutProps) => (
+    <AppLayoutTemplate breadcrumbs={breadcrumbs} scrollable={scrollable} {...props}>
         {children}
         <FloatingProgressWidget />
     </AppLayoutTemplate>

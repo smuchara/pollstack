@@ -56,7 +56,7 @@ export default function Password() {
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} scrollable={false}>
             <Head title="Password settings" />
 
             <SettingsLayout>

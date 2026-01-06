@@ -1,85 +1,91 @@
 import Heading from '@/components/heading';
-import { cn, isSameUrl, resolveUrl } from '@/lib/utils';
+import { SecondarySidebar } from '@/components/secondary-sidebar';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
-import { show } from '@/routes/two-factor';
-import { edit as editPassword } from '@/routes/user-password';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { edit as tenantEditAppearance } from '@/routes/tenant/appearance';
+import { edit as tenantEdit } from '@/routes/tenant/profile';
+import { type NavItem, type SharedData } from '@/types';
+import { usePage } from '@inertiajs/react';
+import { Bell, CreditCard, Globe, Settings2, User, Users, Wrench } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 
-const tabNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-        icon: null,
-    },
-    {
-        title: 'Password',
-        href: editPassword(),
-        icon: null,
-    },
-    {
-        title: 'Two-Factor Auth',
-        href: show(),
-        icon: null,
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-        icon: null,
-    },
-];
-
 export default function SettingsLayout({ children }: PropsWithChildren) {
-    // When server-side rendering, we only render the layout on the client...
-    if (typeof window === 'undefined') {
-        return null;
-    }
+    const { organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
 
-    const currentPath = window.location.pathname;
+    const generalItems: NavItem[] = [
+        {
+            title: 'Apps',
+            href: organization_slug ? tenantEditAppearance({ organization_slug }) : editAppearance(),
+            icon: Wrench,
+            // Check if active: usually Inertia handles this, but SecondarySidebar uses manual check.
+            // We might need to handle 'isActive' explicitly if URL matching is tricky,
+            // but SecondarySidebar uses `isSameUrl` which should work if href is correct.
+        },
+        {
+            title: 'Account',
+            href: organization_slug ? tenantEdit({ organization_slug }) : edit(),
+            icon: User,
+        },
+        {
+            title: 'Notification',
+            href: '#',
+            icon: Bell,
+        },
+        {
+            title: 'Language & Region',
+            href: '#',
+            icon: Globe,
+        },
+    ];
+
+    const workspaceItems: NavItem[] = [
+        {
+            title: 'General',
+            href: '#',
+            icon: Settings2,
+        },
+        {
+            title: 'Members',
+            href: '#',
+            icon: Users,
+        },
+        {
+            title: 'Billing',
+            href: '#',
+            icon: CreditCard,
+        },
+    ];
+
+    const navGroups = [
+        {
+            title: 'General Settings',
+            items: generalItems,
+        },
+        {
+            title: 'Workspace Settings',
+            items: workspaceItems,
+        },
+    ];
 
     return (
-        <div className="px-4 py-6">
-            <Heading
-                title="Settings"
-                description="Manage your profile and account settings"
-            />
+        <div className="flex flex-col md:flex-row h-full min-h-0">
+            <div className="hidden md:block shrink-0 overflow-y-auto py-6 pl-6 md:py-8 md:pl-8">
+                <SecondarySidebar groups={navGroups} />
+            </div>
 
-            {/* Horizontal Tab Navigation */}
-            <nav className="mb-6 border-b border-border">
-                <div className="flex space-x-1 overflow-x-auto">
-                    {tabNavItems.map((item, index) => {
-                        const isActive = isSameUrl(currentPath, item.href);
-                        return (
-                            <Link
-                                key={`${resolveUrl(item.href)}-${index}`}
-                                href={item.href}
-                                className={cn(
-                                    'relative px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
-                                    'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                                    isActive
-                                        ? 'text-foreground'
-                                        : 'text-muted-foreground',
-                                )}
-                            >
-                                {item.title}
-                                {isActive && (
-                                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                                )}
-                            </Link>
-                        );
-                    })}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8">
+                <div className="w-full max-w-3xl">
+                    <div className="space-y-6">
+                        <Heading
+                            title="Account Settings"
+                            description="Manage your profile and account settings"
+                        />
+                        <div className="border-t border-border pt-6">
+                            {children}
+                        </div>
+                    </div>
                 </div>
-            </nav>
-
-            {/* Content Area */}
-            <div className="max-w-2xl">
-                <section className="space-y-8">
-                    {children}
-                </section>
             </div>
         </div>
     );
 }
-

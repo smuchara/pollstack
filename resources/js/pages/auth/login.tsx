@@ -9,6 +9,7 @@ import AuthSplitLayout from '@/layouts/auth/auth-split-layout';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
+import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 
 interface LoginProps {
@@ -32,13 +33,9 @@ export default function Login({
                 className="flex flex-col gap-6"
             >
                 {({ processing, errors }) => {
-                    // Show toast error when there are validation errors
-                    if (errors.email || errors.password) {
-                        toast.error('Invalid credentials. Please try again.');
-                    }
-
                     return (
                         <>
+                            <FormErrorToaster errors={errors} />
                             <div className="grid gap-6">
                                 <div className="grid gap-2">
                                     <Label htmlFor="email">Email address</Label>
@@ -107,4 +104,14 @@ export default function Login({
 
         </AuthSplitLayout>
     );
+}
+
+function FormErrorToaster({ errors }: { errors: Record<string, string> }) {
+    useEffect(() => {
+        if (errors.email || errors.password) {
+            toast.error('Invalid credentials. Please try again.');
+        }
+    }, [errors]);
+
+    return null;
 }

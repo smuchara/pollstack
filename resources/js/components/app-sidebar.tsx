@@ -12,7 +12,7 @@ import { dashboard } from '@/routes';
 import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
-import { BarChart3, LayoutGrid, Settings, UserPlus, Users } from 'lucide-react';
+import { BarChart3, LayoutGrid, ListChecks, Settings, UserPlus, Users, Vote } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
@@ -22,12 +22,10 @@ export function AppSidebar() {
     const { auth, organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
     const user = auth?.user;
 
-    // Build base URL for tenant context  
     const tenantBaseUrl = organization_slug
         ? `/organization/${organization_slug}/admin`
         : '/admin';
 
-    // Determine the correct dashboard URL based on user role
     const dashboardUrl = useMemo(() => {
         if (user?.is_super_admin) {
             return '/super-admin/dashboard';
@@ -41,11 +39,8 @@ export function AppSidebar() {
         return dashboard().url;
     }, [user, organization_slug, tenantBaseUrl]);
 
-    // Build navigation groups based on user role
     const navGroups = useMemo(() => {
         const groups: NavGroup[] = [];
-
-        // General group - always present
         groups.push({
             title: 'General',
             items: [
@@ -57,29 +52,28 @@ export function AppSidebar() {
             ],
         });
 
-        // Polls group
         const pollItems: NavItem[] = [];
         if (user?.is_admin && !user?.is_super_admin && organization_slug) {
             pollItems.push({
                 title: 'Poll Voting',
                 href: `${tenantBaseUrl}/polls-voting`,
-                icon: BarChart3,
+                icon: Vote,
             });
             pollItems.push({
                 title: 'Poll Management',
                 href: `${tenantBaseUrl}/polls-management`,
-                icon: BarChart3,
+                icon: ListChecks,
             });
         } else if (user?.is_super_admin) {
             pollItems.push({
                 title: 'Poll Voting',
                 href: '/polls',
-                icon: BarChart3,
+                icon: Vote,
             });
             pollItems.push({
                 title: 'Poll Management',
                 href: '/super-admin/polls',
-                icon: BarChart3,
+                icon: ListChecks,
             });
         } else {
             pollItems.push({
@@ -95,7 +89,6 @@ export function AppSidebar() {
             });
         }
 
-        // Users group
         const userItems: NavItem[] = [];
         if (user?.is_admin && !user?.is_super_admin) {
             userItems.push({
@@ -123,7 +116,6 @@ export function AppSidebar() {
             });
         }
 
-        // Administration group
         const adminItems: NavItem[] = [];
         if (user?.is_super_admin) {
             adminItems.push({
