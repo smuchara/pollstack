@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Poll;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,6 +21,7 @@ class PollFactory extends Factory
             'question' => $this->faker->sentence().'?',
             'description' => $this->faker->optional()->paragraph(),
             'type' => $this->faker->randomElement(['open', 'closed']),
+            'visibility' => Poll::VISIBILITY_PUBLIC,
             'status' => 'active',
             'start_at' => now(),
             'end_at' => $this->faker->optional()->dateTimeBetween('now', '+30 days'),
@@ -41,5 +43,25 @@ class PollFactory extends Factory
                 ]);
             }
         });
+    }
+
+    /**
+     * Indicate that the poll is invite-only.
+     */
+    public function inviteOnly(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'visibility' => Poll::VISIBILITY_INVITE_ONLY,
+        ]);
+    }
+
+    /**
+     * Indicate that the poll is public.
+     */
+    public function public(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'visibility' => Poll::VISIBILITY_PUBLIC,
+        ]);
     }
 }

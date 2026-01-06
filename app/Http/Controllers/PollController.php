@@ -13,6 +13,7 @@ class PollController extends Controller
      * Returns separate datasets for active and ended polls with counts.
      * System polls are ONLY visible to users without an organization (for internal testing).
      * Organization users only see polls created within their organization.
+     * Invite-only polls are only visible to invited users or users in invited departments.
      */
     public function index(Request $request)
     {
@@ -27,6 +28,8 @@ class PollController extends Controller
                     },
                     'organization',
                     'creator',
+                    'invitedUsers',
+                    'invitedDepartments',
                 ])
                 ->when($user->isSuperAdmin() && ! $user->organization_id, function ($query) {
                     // Super admins without organization see only system-wide polls
@@ -34,7 +37,9 @@ class PollController extends Controller
                 })
                 ->when($user->organization_id, function ($query) use ($user) {
                     // Organization users (including org admins) see only their organization's polls
-                    $query->where('organization_id', $user->organization_id);
+                    // that are visible to them (public or they're invited)
+                    $query->where('organization_id', $user->organization_id)
+                        ->visibleTo($user);
                 })
                 ->when(! $user->isSuperAdmin() && ! $user->organization_id, function ($query) {
                     // Users without organization see only system-wide polls

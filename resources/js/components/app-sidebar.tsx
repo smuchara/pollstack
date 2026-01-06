@@ -12,7 +12,7 @@ import { dashboard } from '@/routes';
 import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
-import { BarChart3, LayoutGrid, ListChecks, Settings, UserPlus, Users, Vote } from 'lucide-react';
+import { BarChart3, Building2, LayoutGrid, ListChecks, Settings, UserPlus, Users, Vote } from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
@@ -95,6 +95,11 @@ export function AppSidebar() {
                 title: 'User Management',
                 href: `${tenantBaseUrl}/users`,
                 icon: Users,
+            });
+            userItems.push({
+                title: 'Departments',
+                href: `${tenantBaseUrl}/departments`,
+                icon: Building2,
             });
         }
         if (user?.is_super_admin) {

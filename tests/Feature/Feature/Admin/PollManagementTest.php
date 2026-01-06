@@ -15,6 +15,7 @@ test('organization admin can create poll for their organization', function () {
         'question' => 'What is your favorite feature?',
         'description' => 'Help us improve',
         'type' => 'open',
+        'visibility' => 'public',
         'status' => 'active',
         'options' => [
             ['text' => 'Feature A'],
@@ -41,6 +42,7 @@ test('poll created by organization admin is automatically scoped to organization
     $pollData = [
         'question' => 'Test Poll',
         'type' => 'open',
+        'visibility' => 'public',
         'status' => 'active',
         'options' => [
             ['text' => 'Option 1'],
@@ -71,6 +73,7 @@ test('organization admin can update polls in their organization', function () {
         'question' => 'Updated Question',
         'description' => 'Updated description',
         'type' => 'closed',
+        'visibility' => 'public',
         'status' => 'active',
         'options' => [
             ['text' => 'New Option 1'],
@@ -102,6 +105,7 @@ test('organization admin cannot update polls from other organizations', function
     $updateData = [
         'question' => 'Hacked Question',
         'type' => 'open',
+        'visibility' => 'public',
         'status' => 'active',
         'options' => [
             ['text' => 'Option 1'],

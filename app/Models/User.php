@@ -303,4 +303,29 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->belongsTo(Organization::class);
     }
+
+    /**
+     * Get the departments the user belongs to.
+     */
+    public function departments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'department_user')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if the user belongs to a specific department.
+     */
+    public function belongsToDepartment(Department $department): bool
+    {
+        return $this->departments()->where('departments.id', $department->id)->exists();
+    }
+
+    /**
+     * Check if the user belongs to any of the given departments.
+     */
+    public function belongsToAnyDepartment(array $departmentIds): bool
+    {
+        return $this->departments()->whereIn('departments.id', $departmentIds)->exists();
+    }
 }

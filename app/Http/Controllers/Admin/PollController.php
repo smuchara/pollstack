@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Department;
 use App\Models\Poll;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -17,7 +19,7 @@ class PollController extends Controller
     {
         $organization = app('organization');
 
-        $polls = Poll::with(['organization', 'creator', 'options'])
+        $polls = Poll::with(['organization', 'creator', 'options', 'invitedUsers', 'invitedDepartments'])
             ->where('organization_id', $organization->id)
             ->latest()
             ->paginate(10);
@@ -36,11 +38,28 @@ class PollController extends Controller
                 $poll->refresh();
             }
 
+            // Add counts for display
+            $poll->invited_users_count = $poll->invitedUsers->count();
+            $poll->invited_departments_count = $poll->invitedDepartments->count();
+
             return $poll;
         });
 
+        // Get departments for QuickInvite feature
+        $departments = Department::where('organization_id', $organization->id)
+            ->withCount('users')
+            ->orderBy('name')
+            ->get();
+
+        // Get users for individual invite
+        $users = User::where('organization_id', $organization->id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
         return Inertia::render('admin/polls', [
             'polls' => $polls,
+            'departments' => $departments,
+            'users' => $users,
         ]);
     }
 
@@ -55,11 +74,17 @@ class PollController extends Controller
             'question' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'required|string|in:open,closed',
+            'visibility' => 'required|string|in:public,invite_only',
             'status' => 'required|string|in:scheduled,active,ended,archived',
             'start_at' => 'nullable|date',
             'end_at' => 'nullable|date|after_or_equal:start_at',
             'options' => 'required|array|min:2',
             'options.*.text' => 'required|string|max:255',
+            // Optional: invite users/departments immediately when creating an invite-only poll
+            'invite_user_ids' => 'nullable|array',
+            'invite_user_ids.*' => 'integer|exists:users,id',
+            'invite_department_ids' => 'nullable|array',
+            'invite_department_ids.*' => 'integer|exists:departments,id',
         ]);
 
         // Determine actual status based on timing
@@ -70,6 +95,7 @@ class PollController extends Controller
                 'question' => $validated['question'],
                 'description' => $validated['description'] ?? null,
                 'type' => $validated['type'],
+                'visibility' => $validated['visibility'],
                 'status' => $status,
                 'start_at' => $validated['start_at'] ?? null,
                 'end_at' => $validated['end_at'] ?? null,
@@ -82,6 +108,16 @@ class PollController extends Controller
                     'text' => $optionData['text'],
                     'order' => $index,
                 ]);
+            }
+
+            // Handle immediate invitations for invite-only polls
+            if ($validated['visibility'] === Poll::VISIBILITY_INVITE_ONLY) {
+                if (! empty($validated['invite_user_ids'])) {
+                    $poll->inviteUsers($validated['invite_user_ids'], $request->user()->id);
+                }
+                if (! empty($validated['invite_department_ids'])) {
+                    $poll->inviteDepartments($validated['invite_department_ids'], $request->user()->id);
+                }
             }
         });
 
@@ -109,6 +145,7 @@ class PollController extends Controller
             'question' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'required|string|in:open,closed',
+            'visibility' => 'required|string|in:public,invite_only',
             'status' => 'required|string|in:scheduled,active,ended,archived',
             'start_at' => 'nullable|date',
             'end_at' => 'nullable|date|after_or_equal:start_at',
@@ -125,6 +162,7 @@ class PollController extends Controller
                 'question' => $validated['question'],
                 'description' => $validated['description'] ?? null,
                 'type' => $validated['type'],
+                'visibility' => $validated['visibility'],
                 'status' => $status,
                 'start_at' => $validated['start_at'] ?? null,
                 'end_at' => $validated['end_at'] ?? null,
