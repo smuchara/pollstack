@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\InviteDepartmentsToPollRequest;
 use App\Http\Requests\Admin\InviteUsersToPollRequest;
+use App\Mail\PollInvitation;
 use App\Models\Department;
 use App\Models\Poll;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class PollInvitationController extends Controller
 {
@@ -96,7 +98,18 @@ class PollInvitationController extends Controller
             return back()->with('error', 'Some users do not belong to your organization.');
         }
 
-        $poll->inviteUsers($validUserIds, $request->user()->id);
+        // Invite users and get changes
+        $changes = $poll->inviteUsers($validUserIds, $request->user()->id);
+
+        // Send email notifications to newly invited users
+        $newlyInvitedIds = $changes['attached'];
+
+        if (!empty($newlyInvitedIds)) {
+            $usersToInvite = User::whereIn('id', $newlyInvitedIds)->get();
+            foreach ($usersToInvite as $user) {
+                Mail::to($user)->queue(new PollInvitation($poll, $user));
+            }
+        }
 
         $count = count($validUserIds);
 
@@ -126,7 +139,21 @@ class PollInvitationController extends Controller
             return back()->with('error', 'Some departments do not belong to your organization.');
         }
 
-        $poll->inviteDepartments($validDeptIds, $request->user()->id);
+        // Invite departments and get changes
+        $changes = $poll->inviteDepartments($validDeptIds, $request->user()->id);
+
+        // Send email notifications to users in newly invited departments
+        $newlyInvitedDeptIds = $changes['attached'];
+
+        if (!empty($newlyInvitedDeptIds)) {
+            $usersInDepts = User::whereHas('departments', function ($query) use ($newlyInvitedDeptIds) {
+                $query->whereIn('departments.id', $newlyInvitedDeptIds);
+            })->get();
+
+            foreach ($usersInDepts as $user) {
+                Mail::to($user)->queue(new PollInvitation($poll, $user));
+            }
+        }
 
         // Get count of users who will be invited via departments
         $userCount = User::whereHas('departments', function ($query) use ($validDeptIds) {

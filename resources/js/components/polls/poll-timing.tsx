@@ -7,15 +7,16 @@ interface PollTimingProps {
     endAt: string | null;
     showDuration?: boolean;
     compact?: boolean;
+    className?: string;
     organization?: {
         id: number;
         name: string;
     } | null;
 }
 
-export default function PollTiming({ startAt, endAt, showDuration = true, compact = false, organization }: PollTimingProps) {
+export default function PollTiming({ startAt, endAt, showDuration = true, compact = false, className = '', organization }: PollTimingProps) {
     return (
-        <div className={`space-y-2 border-t pt-3 ${compact ? 'mt-2' : 'mt-3'}`}>
+        <div className={`space-y-2 border-t pt-3 ${compact ? 'mt-2' : 'mt-3'} ${className}`}>
             {/* Duration Badge */}
             {showDuration && startAt && endAt && (
                 <div className="flex items-center justify-between">

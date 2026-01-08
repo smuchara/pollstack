@@ -50,9 +50,11 @@ interface Poll {
 
 interface Props {
     activePolls: Poll[];
+    scheduledPolls: Poll[];
     endedPolls: Poll[];
     counts: {
         active: number;
+        scheduled: number;
         ended: number;
     };
 }
@@ -62,7 +64,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Poll Voting', href: '/polls' },
 ];
 
-export default function PollsIndex({ activePolls, endedPolls, counts }: Props) {
+export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, counts }: Props) {
     const [selectedOptions, setSelectedOptions] = useState<Record<number, number>>({});
     const [submitting, setSubmitting] = useState<Record<number, boolean>>({});
 
@@ -187,6 +189,56 @@ export default function PollsIndex({ activePolls, endedPolls, counts }: Props) {
         </Card>
     );
 
+    const renderScheduledPoll = (poll: Poll) => (
+        <Card key={poll.id} className="flex flex-col opacity-90">
+            <CardHeader className="pb-3">
+                <div className="flex justify-between items-start gap-2">
+                    <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <PollStatusBadge status={poll.status} />
+                            <PollTypeBadge type={poll.type} />
+                        </div>
+                        <CardTitle className="text-lg leading-tight line-clamp-2" title={poll.question}>
+                            {poll.question}
+                        </CardTitle>
+                    </div>
+                </div>
+                {poll.description && (
+                    <CardDescription className="line-clamp-2 mt-2">
+                        {poll.description}
+                    </CardDescription>
+                )}
+            </CardHeader>
+
+            <CardContent className="flex-1 pb-3">
+                <div className="space-y-3">
+                    <Label className="text-sm font-medium text-muted-foreground">Options Preview:</Label>
+                    <div className="space-y-2">
+                         {poll.options.map((option) => (
+                            <div key={option.id} className="text-sm border rounded px-3 py-2 bg-muted/30 text-muted-foreground">
+                                {option.text}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Poll Timing Information */}
+                <PollTiming
+                    startAt={poll.start_at}
+                    endAt={poll.end_at}
+                    organization={poll.organization}
+                    className="mt-4"
+                />
+            </CardContent>
+
+             <CardFooter className="pt-3 border-t bg-muted/10">
+                <div className="w-full text-center text-sm text-muted-foreground">
+                    Voting starts {poll.start_at ? new Date(poll.start_at).toLocaleDateString() : 'soon'}
+                </div>
+            </CardFooter>
+        </Card>
+    );
+
     const renderClosedPoll = (poll: Poll) => (
         <Card key={poll.id} className="flex flex-col">
             <CardHeader className="pb-3">
@@ -293,26 +345,33 @@ export default function PollsIndex({ activePolls, endedPolls, counts }: Props) {
                     />
 
                     {/* Tabbed Interface */}
-                    <Tabs defaultValue="open" className="w-full">
-                        <TabsList className="grid w-full max-w-md grid-cols-2">
-                            <TabsTrigger value="open" className="gap-2">
+                    <Tabs defaultValue="active" className="w-full">
+                        <TabsList className="grid w-full max-w-md grid-cols-3">
+                            <TabsTrigger value="active" className="gap-2">
                                 <Vote className="h-4 w-4" />
-                                Open Votes
+                                Active
                                 <Badge variant="secondary" className="ml-1">
                                     {counts.active}
                                 </Badge>
                             </TabsTrigger>
-                            <TabsTrigger value="closed" className="gap-2">
+                            <TabsTrigger value="scheduled" className="gap-2">
+                                <CheckCircle2 className="h-4 w-4" />
+                                Scheduled
+                                <Badge variant="secondary" className="ml-1">
+                                    {counts.scheduled}
+                                </Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="ended" className="gap-2">
                                 <PieChart className="h-4 w-4" />
-                                Closed Votes
+                                Ended
                                 <Badge variant="secondary" className="ml-1">
                                     {counts.ended}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
 
-                        {/* Open Votes Tab */}
-                        <TabsContent value="open" className="mt-6">
+                        {/* Active Polls Tab */}
+                        <TabsContent value="active" className="mt-6">
                             {activePolls.length > 0 ? (
                                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                                     {activePolls.map(renderActivePoll)}
@@ -321,13 +380,28 @@ export default function PollsIndex({ activePolls, endedPolls, counts }: Props) {
                                 <EmptyState
                                     icon={Vote}
                                     title="No active polls"
-                                    description="There are currently no open polls available for you to vote on."
+                                    description="There are currently no active polls available for you to vote on."
                                 />
                             )}
                         </TabsContent>
 
-                        {/* Closed Votes Tab */}
-                        <TabsContent value="closed" className="mt-6">
+                        {/* Scheduled Polls Tab */}
+                        <TabsContent value="scheduled" className="mt-6">
+                            {scheduledPolls.length > 0 ? (
+                                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                                    {scheduledPolls.map(renderScheduledPoll)}
+                                </div>
+                            ) : (
+                                <EmptyState
+                                    icon={Vote}
+                                    title="No scheduled polls"
+                                    description="There are currently no polls scheduled for the future."
+                                />
+                            )}
+                        </TabsContent>
+
+                        {/* Ended Polls Tab */}
+                        <TabsContent value="ended" className="mt-6">
                             {endedPolls.length > 0 ? (
                                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                                     {endedPolls.map(renderClosedPoll)}
@@ -335,8 +409,8 @@ export default function PollsIndex({ activePolls, endedPolls, counts }: Props) {
                             ) : (
                                 <EmptyState
                                     icon={PieChart}
-                                    title="No closed polls"
-                                    description="There are currently no closed polls to view."
+                                    title="No ended polls"
+                                    description="There are currently no ended polls to view."
                                 />
                             )}
                         </TabsContent>

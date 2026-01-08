@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PollInvitation;
 use App\Models\Department;
 use App\Models\Poll;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class PollController extends Controller
@@ -112,11 +114,33 @@ class PollController extends Controller
 
             // Handle immediate invitations for invite-only polls
             if ($validated['visibility'] === Poll::VISIBILITY_INVITE_ONLY) {
-                if (! empty($validated['invite_user_ids'])) {
-                    $poll->inviteUsers($validated['invite_user_ids'], $request->user()->id);
+                if (!empty($validated['invite_user_ids'])) {
+                    $changes = $poll->inviteUsers($validated['invite_user_ids'], $request->user()->id);
+
+                    // Send email notifications
+                    $newlyInvitedIds = $changes['attached'];
+                    if (!empty($newlyInvitedIds)) {
+                        $usersToInvite = User::whereIn('id', $newlyInvitedIds)->get();
+                        foreach ($usersToInvite as $user) {
+                            Mail::to($user)->queue(new PollInvitation($poll, $user));
+                        }
+                    }
                 }
-                if (! empty($validated['invite_department_ids'])) {
-                    $poll->inviteDepartments($validated['invite_department_ids'], $request->user()->id);
+
+                if (!empty($validated['invite_department_ids'])) {
+                    $changes = $poll->inviteDepartments($validated['invite_department_ids'], $request->user()->id);
+
+                    // Send email notifications for departments
+                    $newlyInvitedDeptIds = $changes['attached'];
+                    if (!empty($newlyInvitedDeptIds)) {
+                        $usersInDepts = User::whereHas('departments', function ($query) use ($newlyInvitedDeptIds) {
+                            $query->whereIn('departments.id', $newlyInvitedDeptIds);
+                        })->get();
+
+                        foreach ($usersInDepts as $user) {
+                            Mail::to($user)->queue(new PollInvitation($poll, $user));
+                        }
+                    }
                 }
             }
         });
