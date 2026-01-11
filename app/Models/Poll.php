@@ -98,6 +98,14 @@ class Poll extends Model
     }
 
     /**
+     * Get the proxies assigned for this poll.
+     */
+    public function proxies(): HasMany
+    {
+        return $this->hasMany(PollProxy::class);
+    }
+
+    /**
      * Scope a query to only include polls for a specific organization.
      */
     public function scopeForOrganization($query, $organizationId)
@@ -156,10 +164,10 @@ class Poll extends Model
                             })
                                 // Or invited via department
                                 ->orWhereHas('invitedDepartments', function ($deptQ) use ($user) {
-                                    $deptQ->whereHas('users', function ($userQ) use ($user) {
-                                        $userQ->where('users.id', $user->id);
-                                    });
+                                $deptQ->whereHas('users', function ($userQ) use ($user) {
+                                    $userQ->where('users.id', $user->id);
                                 });
+                            });
                         });
                 });
         });
@@ -170,7 +178,7 @@ class Poll extends Model
      */
     public function hasEnded(): bool
     {
-        if (! $this->end_at) {
+        if (!$this->end_at) {
             return false;
         }
 
@@ -186,7 +194,7 @@ class Poll extends Model
             return false;
         }
 
-        if (! $this->start_at) {
+        if (!$this->start_at) {
             return false;
         }
 
@@ -282,7 +290,7 @@ class Poll extends Model
         }
 
         // Check visibility - invite-only polls require invitation
-        if ($this->isInviteOnly() && ! $this->isUserInvited($user)) {
+        if ($this->isInviteOnly() && !$this->isUserInvited($user)) {
             return false;
         }
 

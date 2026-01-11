@@ -103,6 +103,11 @@ class PollController extends Controller
             if ($validated['visibility'] === Poll::VISIBILITY_INVITE_ONLY) {
                 // Capture users to notify, do not send yet
                 $usersToNotify = $this->handleInvitations($poll, $validated, $request->user()->id);
+
+                // Handle Proxy Assignments
+                if (!empty($request->proxies)) {
+                    $this->handleProxies($poll, $request->proxies, $request->user()->id);
+                }
             }
         });
 
@@ -352,6 +357,69 @@ class PollController extends Controller
         }
 
         return $usersToNotify;
+    }
+
+    /**
+     * Handle proxy assignments.
+     */
+    private function handleProxies(Poll $poll, array $proxies, int $creatorId): void
+    {
+        Log::info('Handling proxies', ['count' => count($proxies)]);
+
+        // We need to resolve IDs. 
+        // Frontend sends either real DB IDs (for existing selected users) or temp IDs (from Excel).
+        // For Excel users, we need to map Temp ID -> Real DB ID via Email.
+
+        // 1. Build a map of Temp ID -> Email from the request input 'invite_users_list'
+        $tempIdToEmail = [];
+        $inviteList = request()->input('invite_users_list', []);
+        foreach ($inviteList as $invite) {
+            if (isset($invite['temp_id']) && isset($invite['email'])) {
+                $tempIdToEmail[$invite['temp_id']] = $invite['email'];
+            }
+        }
+
+        // 2. Resolve Emails to Real IDs
+        $emailToRealId = [];
+        if (!empty($tempIdToEmail)) {
+            $emails = array_values($tempIdToEmail);
+            $emailToRealId = User::whereIn('email', $emails)
+                ->where('organization_id', $poll->organization_id)
+                ->pluck('id', 'email')
+                ->toArray();
+        }
+
+        foreach ($proxies as $proxyData) {
+            $principalId = $proxyData['principal_id'];
+            $proxyUserId = $proxyData['proxy_id'];
+
+            // Resolve Principal ID
+            // If it's a temp ID, look up email, then look up real ID
+            if (isset($tempIdToEmail[$principalId])) {
+                $email = $tempIdToEmail[$principalId];
+                $principalId = $emailToRealId[$email] ?? null;
+            }
+
+            // Resolve Proxy User ID
+            if (isset($tempIdToEmail[$proxyUserId])) {
+                $email = $tempIdToEmail[$proxyUserId];
+                $proxyUserId = $emailToRealId[$email] ?? null;
+            }
+
+            if ($principalId && $proxyUserId) {
+                // Ensure unique proxy per user per poll
+                $poll->proxies()->updateOrCreate(
+                    ['user_id' => $principalId], // Unique key: A user can only have one proxy
+                    [
+                        'proxy_user_id' => $proxyUserId,
+                        'created_by' => $creatorId
+                    ]
+                );
+                Log::info("Assigned proxy: User $principalId -> Proxy $proxyUserId");
+            } else {
+                Log::warning("Could not resolve proxy assignment", ['principal' => $proxyData['principal_id'], 'proxy' => $proxyData['proxy_id']]);
+            }
+        }
     }
 
     /**

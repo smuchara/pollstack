@@ -12,8 +12,11 @@ import {
     Users,
     X,
     Zap,
+    Trash2,
+    Shield,
+    UserPlus,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +32,8 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { ExtractedUser } from './poll-invite-review-modal';
+import { ProxyAssignmentModal, ProxyUser } from './proxy-assignment-modal';
 
 
 export interface User {
@@ -67,9 +72,11 @@ interface PollFormSharedProps {
     onUsersChange: (ids: number[]) => void;
     inviteFile?: File | null;
     onInviteFileChange?: (file: File | null) => void;
-    inviteListCount?: number;
-    onViewInviteList?: () => void;
-    onClearInviteList?: () => void;
+    // Updated props for inline list and proxies
+    reviewedUsers?: ExtractedUser[];
+    onReviewedUsersChange?: (users: ExtractedUser[]) => void;
+    proxies?: {principal: string|number, proxy: string|number}[];
+    onProxiesChange?: (proxies: {principal: string|number, proxy: string|number}[]) => void;
 }
 
 export function PollFormShared({
@@ -81,11 +88,71 @@ export function PollFormShared({
     onUsersChange,
     inviteFile,
     onInviteFileChange,
-    inviteListCount = 0,
-    onViewInviteList,
-    onClearInviteList,
+    // updated props
+    reviewedUsers = [],
+    onReviewedUsersChange,
+    proxies = [],
+    onProxiesChange,
 }: PollFormSharedProps) {
     const [userSearchQuery, setUserSearchQuery] = useState('');
+    const [reviewedUserSearch, setReviewedUserSearch] = useState('');
+    const [isProxyModalOpen, setIsProxyModalOpen] = useState(false);
+
+    // Helpers for Proxy Modal
+    const availableProxyUsers = useMemo(() => {
+        // Map existing selected users
+        const existing = selectedUsers.map(id => {
+            const u = users.find(x => x.id === id);
+            // Ensure type is 'existing' literal
+            return u ? { id: u.id, name: u.name, email: u.email, type: 'existing' as const } : null;
+        }).filter((x): x is ProxyUser => x !== null);
+
+        // Map extracted users
+        const extracted: ProxyUser[] = reviewedUsers.map(u => ({
+            id: u.id, // Temp ID from extraction
+            name: u.name,
+            email: u.email,
+            type: 'new'
+        }));
+
+        return [...existing, ...extracted];
+    }, [selectedUsers, users, reviewedUsers]);
+
+    const handleAssignProxy = (principal: ProxyUser, proxy: ProxyUser) => {
+        if (!onProxiesChange) return;
+        // Check duplication
+        const exists = proxies.find(p => p.principal === principal.id);
+        if (exists) {
+            // Update or ignore? Let's update
+             onProxiesChange(proxies.map(p => p.principal === principal.id ? { ...p, proxy: proxy.id } : p));
+        } else {
+             onProxiesChange([...proxies, { principal: principal.id, proxy: proxy.id }]);
+        }
+    };
+
+    const getProxyName = (proxyId: string | number) => {
+        const p = availableProxyUsers.find(u => u?.id == proxyId); // loose eq for string/number match
+        return p ? p.name : 'Unknown';
+    };
+
+    const removeProxy = (principalId: string | number) => {
+        if (!onProxiesChange) return;
+        onProxiesChange(proxies.filter(p => p.principal !== principalId));
+    };
+    
+    const removeReviewedUser = (id: number) => {
+        if (!onReviewedUsersChange) return;
+        onReviewedUsersChange(reviewedUsers.filter(u => u.id !== id));
+        // Also remove any proxies associated
+        if (onProxiesChange) {
+            onProxiesChange(proxies.filter(p => p.principal !== id && p.proxy !== id));
+        }
+    };
+
+    const filteredReviewedUsers = reviewedUsers.filter(u => 
+        u.name.toLowerCase().includes(reviewedUserSearch.toLowerCase()) || 
+        u.email.toLowerCase().includes(reviewedUserSearch.toLowerCase())
+    );
 
 
     const toggleUser = (userId: number) => {
@@ -103,7 +170,7 @@ export function PollFormShared({
     );
 
     const getTotalInvitedCount = () => {
-        return selectedUsers.length + inviteListCount;
+        return selectedUsers.length + reviewedUsers.length;
     };
 
     return (
@@ -243,63 +310,151 @@ export function PollFormShared({
                             </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="bulk" className="mt-4">
-                            {inviteListCount > 0 ? (
-                                <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center dark:border-green-900/30 dark:bg-green-900/10">
-                                    <Check className="mx-auto mb-2 h-8 w-8 text-green-500" />
-                                    <p className="font-medium text-green-700 dark:text-green-400">
-                                        {inviteListCount} users ready to invite
-                                    </p>
-                                    <div className="mt-3 flex justify-center gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={onViewInviteList}
-                                        >
-                                            Review List
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={onClearInviteList}
-                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                        >
-                                            Clear
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    <Label>Upload Excel / CSV</Label>
+                        <TabsContent value="bulk" className="mt-4 space-y-4">
+                            
+                            {/* Always show upload to add more? Or replace? 
+                                User asked for "users extracted... appear inside".
+                                Let's keep upload visible if list is empty, or collapsed if not.
+                             */}
+                             
+                             <div className="space-y-3">
+                                {reviewedUsers.length === 0 && (
                                     <div className="rounded-lg border border-dashed p-6 text-center hover:bg-muted/50">
-                                        <Input
+                                         <Input
                                             type="file"
                                             accept=".xlsx,.xls,.csv"
                                             className="mx-auto max-w-xs"
                                             onChange={(e) => {
-                                                if (
-                                                    e.target.files?.[0] &&
-                                                    onInviteFileChange
-                                                ) {
-                                                    onInviteFileChange(
-                                                        e.target.files[0],
-                                                    );
+                                                if (e.target.files?.[0] && onInviteFileChange) {
+                                                    onInviteFileChange(e.target.files[0]);
                                                 }
                                             }}
                                         />
-                                        <p className="mt-2 text-xs text-muted-foreground">
-                                            Upload a list of emails to invite.
-                                        </p>
-                                        {inviteFile && (
-                                            <p className="mt-2 text-sm font-medium text-primary">
-                                                Selected: {inviteFile.name}
-                                            </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">Upload Excel/CSV to invite users.</p>
+                                    </div>
+                                )}
+                             </div>
+
+                            {/* Inline List of Extracted Users */}
+                            {reviewedUsers.length > 0 && (
+                                <div className="rounded-md border bg-card">
+                                    {/* Sticky Toolbar */}
+                                    <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-muted/40 p-2 backdrop-blur">
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="bg-background">
+                                                {reviewedUsers.length} Users
+                                            </Badge>
+                                            {/* Search for reviewed users */}
+                                            <Input 
+                                                className="h-8 w-40 bg-background text-xs" 
+                                                placeholder="Search list..." 
+                                                value={reviewedUserSearch}
+                                                onChange={(e) => setReviewedUserSearch(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button 
+                                                type="button" 
+                                                size="sm" 
+                                                variant="secondary"
+                                                onClick={() => setIsProxyModalOpen(true)}
+                                                className="h-8 gap-2 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300"
+                                            >
+                                                <Shield className="h-3.5 w-3.5" />
+                                                Assign Proxy
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => onReviewedUsersChange?.([])}
+                                                className="h-8 w-8 p-0 text-destructive"
+                                                title="Clear All"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Scrollable list */}
+                                    <div className="max-h-[300px] overflow-auto p-2">
+                                        {filteredReviewedUsers.length === 0 ? (
+                                             <p className="py-4 text-center text-sm text-muted-foreground">No users match your search.</p>
+                                        ) : (
+                                            <div className="space-y-1">
+                                                {filteredReviewedUsers.map((user) => {
+                                                    const proxy = proxies.find(p => p.principal === user.id);
+                                                    return (
+                                                        <div key={user.id} className="flex items-center justify-between rounded p-2 hover:bg-muted/50">
+                                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                                                                    {user.name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <p className="truncate text-sm font-medium">{user.name}</p>
+                                                                        {proxy && (
+                                                                            <Badge variant="outline" className="h-5 gap-1 border-purple-200 bg-purple-50 px-1 text-[10px] text-purple-700">
+                                                                                <Shield className="h-3 w-3" />
+                                                                                Proxy: {getProxyName(proxy.proxy)}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                {proxy && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                                                        onClick={() => removeProxy(user.id)}
+                                                                        title="Remove Proxy"
+                                                                    >
+                                                                        <Shield className="h-3.5 w-3.5 fill-current opacity-50" />
+                                                                    </Button>
+                                                                )}
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                                                    onClick={() => removeReviewedUser(user.id)}
+                                                                >
+                                                                    <X className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         )}
+                                    </div>
+                                    
+                                    {/* Footer with add more option */}
+                                    <div className="border-t bg-muted/20 p-2 text-center">
+                                       <div className="relative">
+                                            <Input
+                                                type="file"
+                                                accept=".xlsx,.xls,.csv"
+                                                className="absolute inset-0 cursor-pointer opacity-0"
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0] && onInviteFileChange) {
+                                                        onInviteFileChange(e.target.files[0]);
+                                                    }
+                                                }}
+                                            />
+                                            <Button variant="outline" size="sm" className="w-full gap-2 border-dashed">
+                                                <UserPlus className="h-4 w-4" />
+                                                Import More Users
+                                            </Button>
+                                       </div>
                                     </div>
                                 </div>
                             )}
+
                         </TabsContent>
 
                         <TabsContent value="users" className="mt-4">
@@ -445,6 +600,12 @@ export function PollFormShared({
                     )}
                 </div>
             </div>
+            <ProxyAssignmentModal
+                isOpen={isProxyModalOpen}
+                onClose={() => setIsProxyModalOpen(false)}
+                availableUsers={availableProxyUsers}
+                onAssign={handleAssignProxy}
+            />
         </div>
     );
 }

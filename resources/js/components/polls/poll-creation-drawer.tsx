@@ -15,7 +15,8 @@ import {
 import { PollType } from './poll-type-selector';
 import { ProfilePollForm, ProfilePollOption } from './profile-poll-form';
 import { StandardPollForm, StandardPollOption } from './standard-poll-form';
-import { PollInviteReviewModal, ExtractedUser } from './poll-invite-review-modal';
+import { ProxyAssignmentModal, ProxyUser } from './proxy-assignment-modal';
+import { ExtractedUser } from './poll-invite-review-modal';
 
 export interface Poll {
     id?: number;
@@ -115,7 +116,8 @@ export function PollCreationDrawer({
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
     const [inviteFile, setInviteFile] = useState<File | null>(null);
     const [reviewedUsers, setReviewedUsers] = useState<ExtractedUser[]>([]);
-    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    // Proxies state: linking principal (owner) -> proxy (voter)
+    const [proxies, setProxies] = useState<{principal: string|number, proxy: string|number}[]>([]); 
 
     // Form state
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -271,10 +273,11 @@ export function PollCreationDrawer({
                 }
             });
             
+            
             const data = res.data;
             setReviewedUsers(data.users);
-            setIsReviewModalOpen(true);
-            setInviteFile(null); // Clear file input as we now have the list
+            // No longer opening review modal, showing inline
+            setInviteFile(null); // Clear file input
             toast.success('File processed successfully', { id: loadingId });
             
         } catch (e: any) {
@@ -362,7 +365,16 @@ export function PollCreationDrawer({
                  reviewedUsers.forEach((user, index) => {
                      formDataToSend.append(`invite_users_list[${index}][email]`, user.email);
                      formDataToSend.append(`invite_users_list[${index}][name]`, user.name);
+                     // We also send a temporary ID to map proxies if needed
+                     formDataToSend.append(`invite_users_list[${index}][temp_id]`, String(user.id));
                  });
+            }
+            
+            if (proxies.length > 0) {
+                proxies.forEach((p, index) => {
+                    formDataToSend.append(`proxies[${index}][principal_id]`, String(p.principal));
+                    formDataToSend.append(`proxies[${index}][proxy_id]`, String(p.proxy));
+                });
             }
         }
 
@@ -458,20 +470,11 @@ export function PollCreationDrawer({
                     onUsersChange={setSelectedUsers}
                     inviteFile={inviteFile}
                     onInviteFileChange={handleFileChange}
-                    inviteListCount={reviewedUsers.length}
-                    onViewInviteList={() => setIsReviewModalOpen(true)}
-                    onClearInviteList={() => setReviewedUsers([])}
-                />
-
-                <PollInviteReviewModal
-                    isOpen={isReviewModalOpen}
-                    onClose={() => setIsReviewModalOpen(false)}
-                    users={reviewedUsers}
-                    onConfirm={(users) => {
-                         setReviewedUsers(users);
-                         // Keep modal open or close? Usually close.
-                         // Implementation inside modal handles commit, logic here is just state update
-                    }}
+                    // New props for inline list and proxies
+                    reviewedUsers={reviewedUsers}
+                    onReviewedUsersChange={setReviewedUsers}
+                    proxies={proxies}
+                    onProxiesChange={setProxies}
                 />
 
                 {/* Type-Specific Options */}
