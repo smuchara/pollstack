@@ -10,6 +10,7 @@ use App\Models\Department;
 use App\Models\Poll;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log; // Added for debugging
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -78,7 +79,10 @@ class PollController extends Controller
         // Determine actual status based on timing
         $status = $this->determineStatus($validated['status'], $validated['start_at'] ?? null, $validated['end_at'] ?? null);
 
-        DB::transaction(function () use ($validated, $request, $organization, $status) {
+        $usersToNotify = collect();
+        $poll = null; // To access outside transaction
+
+        DB::transaction(function () use ($validated, $request, $organization, $status, &$usersToNotify, &$poll) {
             $poll = Poll::create([
                 'question' => $validated['question'],
                 'description' => $validated['description'] ?? null,
@@ -97,9 +101,20 @@ class PollController extends Controller
 
             // Handle immediate invitations for invite-only polls
             if ($validated['visibility'] === Poll::VISIBILITY_INVITE_ONLY) {
-                $this->handleInvitations($poll, $validated, $request->user()->id);
+                // Capture users to notify, do not send yet
+                $usersToNotify = $this->handleInvitations($poll, $validated, $request->user()->id);
             }
         });
+
+        // Send email notifications after transaction commit
+        if ($poll && $usersToNotify->isNotEmpty()) {
+            Log::info('Queueing emails', ['count' => $usersToNotify->unique('id')->count()]);
+            foreach ($usersToNotify->unique('id') as $user) {
+                Mail::to($user)->queue(new PollInvitation($poll, $user));
+            }
+        } else {
+            Log::info('No users to notify or poll not created', ['users_count' => $usersToNotify->count()]);
+        }
 
         return redirect()->back()->with('success', 'Poll created successfully.');
     }
@@ -284,36 +299,59 @@ class PollController extends Controller
      *
      * @param  array<string, mixed>  $validated
      */
-    private function handleInvitations(Poll $poll, array $validated, int $inviterId): void
+    private function handleInvitations(Poll $poll, array $validated, int $inviterId): \Illuminate\Support\Collection
     {
-        if (! empty($validated['invite_user_ids'])) {
-            $changes = $poll->inviteUsers($validated['invite_user_ids'], $inviterId);
+        Log::info('Handling invitations for Poll', ['poll_id' => $poll->id, 'type' => $poll->poll_type]);
 
-            // Send email notifications
+        $usersToNotify = collect();
+        $userIds = $validated['invite_user_ids'] ?? [];
+
+        // Handle Excel imported users - lookup by email
+        if (!empty($validated['invite_users_list'])) {
+            $emails = collect($validated['invite_users_list'])->pluck('email')->toArray();
+            Log::info('Processing bulk invite list', ['count' => count($emails)]);
+
+            // Find existing users in the organization
+            $existingUserIds = User::whereIn('email', $emails)
+                ->where('organization_id', $poll->organization_id)
+                ->pluck('id')
+                ->toArray();
+
+            Log::info('Found existing users', ['count' => count($existingUserIds)]);
+
+            $userIds = array_merge($userIds, $existingUserIds);
+        }
+
+        $userIds = array_unique($userIds);
+        Log::info('Total unique user IDs to invite', ['count' => count($userIds)]);
+
+        if (!empty($userIds)) {
+            $changes = $poll->inviteUsers($userIds, $inviterId);
+
+            // Collect newly invited users
             $newlyInvitedIds = $changes['attached'];
-            if (! empty($newlyInvitedIds)) {
-                $usersToInvite = User::whereIn('id', $newlyInvitedIds)->get();
-                foreach ($usersToInvite as $user) {
-                    Mail::to($user)->queue(new PollInvitation($poll, $user));
-                }
+            Log::info('Newly attached users', ['count' => count($newlyInvitedIds)]);
+
+            if (!empty($newlyInvitedIds)) {
+                $usersToNotify = $usersToNotify->merge(User::whereIn('id', $newlyInvitedIds)->get());
             }
         }
 
-        if (! empty($validated['invite_department_ids'])) {
+        if (!empty($validated['invite_department_ids'])) {
             $changes = $poll->inviteDepartments($validated['invite_department_ids'], $inviterId);
 
-            // Send email notifications for departments
+            // Collect users in newly invited departments
             $newlyInvitedDeptIds = $changes['attached'];
-            if (! empty($newlyInvitedDeptIds)) {
+            if (!empty($newlyInvitedDeptIds)) {
                 $usersInDepts = User::whereHas('departments', function ($query) use ($newlyInvitedDeptIds) {
                     $query->whereIn('departments.id', $newlyInvitedDeptIds);
                 })->get();
 
-                foreach ($usersInDepts as $user) {
-                    Mail::to($user)->queue(new PollInvitation($poll, $user));
-                }
+                $usersToNotify = $usersToNotify->merge($usersInDepts);
             }
         }
+
+        return $usersToNotify;
     }
 
     /**

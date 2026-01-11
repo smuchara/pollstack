@@ -1,13 +1,13 @@
 import { router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 
 import { Button } from '@/components/ui/button';
 import { SlideDrawer } from '@/components/ui/slide-drawer';
 import { localToUTC, utcToLocalInput } from '@/lib/date-utils';
 
 import {
-    Department,
     PollFormData,
     PollFormShared,
     User,
@@ -15,6 +15,7 @@ import {
 import { PollType } from './poll-type-selector';
 import { ProfilePollForm, ProfilePollOption } from './profile-poll-form';
 import { StandardPollForm, StandardPollOption } from './standard-poll-form';
+import { PollInviteReviewModal, ExtractedUser } from './poll-invite-review-modal';
 
 export interface Poll {
     id?: number;
@@ -37,7 +38,6 @@ export interface Poll {
         votes_count?: number;
     }>;
     invited_users?: User[];
-    invited_departments?: Department[];
 }
 
 interface PollCreationDrawerProps {
@@ -53,8 +53,7 @@ interface PollCreationDrawerProps {
     context?: 'super-admin' | 'organization';
     /** Organization slug (for organization context) */
     organizationSlug?: string;
-    /** Available departments for invite-only polls */
-    departments?: Department[];
+
     /** Available users for invite-only polls */
     users?: User[];
 }
@@ -89,7 +88,6 @@ export function PollCreationDrawer({
     poll,
     context = 'super-admin',
     organizationSlug,
-    departments = [],
     users = [],
 }: PollCreationDrawerProps) {
     const isEditMode = !!poll?.id;
@@ -113,10 +111,11 @@ export function PollCreationDrawer({
     );
 
     // Invitation state
-    const [selectedDepartments, setSelectedDepartments] = useState<number[]>(
-        [],
-    );
+
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+    const [inviteFile, setInviteFile] = useState<File | null>(null);
+    const [reviewedUsers, setReviewedUsers] = useState<ExtractedUser[]>([]);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     // Form state
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -160,10 +159,9 @@ export function PollCreationDrawer({
                     );
                 }
 
-                setSelectedDepartments(
-                    poll.invited_departments?.map((d) => d.id) || [],
-                );
                 setSelectedUsers(poll.invited_users?.map((u) => u.id) || []);
+                setInviteFile(null);
+                setReviewedUsers([]);
             } else {
                 // Create mode: reset to defaults
                 setFormData({
@@ -176,8 +174,9 @@ export function PollCreationDrawer({
                 });
                 setStandardOptions(createEmptyStandardOptions());
                 setProfileOptions(createEmptyProfileOptions());
-                setSelectedDepartments([]);
                 setSelectedUsers([]);
+                setInviteFile(null);
+                setReviewedUsers([]);
             }
             setErrors({});
         }
@@ -235,18 +234,55 @@ export function PollCreationDrawer({
         // Validate invite-only polls have invitations
         if (
             formData.visibility === 'invite_only' &&
-            selectedDepartments.length === 0 &&
-            selectedUsers.length === 0
+            selectedUsers.length === 0 &&
+            !inviteFile &&
+            reviewedUsers.length === 0
         ) {
             newErrors.visibility =
-                'Invite-only polls must have at least one invited user or department.';
+                'Invite-only polls must have at least one invited user or an uploaded invitation file.';
             toast.error(
-                'Invite-only polls must have at least one invited user or department.',
+                'Invite-only polls must have at least one invited user or an uploaded invitation file.',
             );
         }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
+    };
+
+    const handleFileChange = async (file: File | null) => {
+        if (!file) return;
+        
+        const loadingId = toast.loading('Processing file...');
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            // Construct URL based on context
+            const url = organizationSlug 
+                ? `/organization/${organizationSlug}/admin/polls/invite-preview` 
+                : '/super-admin/polls/invite-preview'; 
+
+            const res = await axios.post(url, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                }
+            });
+            
+            const data = res.data;
+            setReviewedUsers(data.users);
+            setIsReviewModalOpen(true);
+            setInviteFile(null); // Clear file input as we now have the list
+            toast.success('File processed successfully', { id: loadingId });
+            
+        } catch (e: any) {
+            console.error(e);
+            const msg = e.response?.data?.message || e.message || 'Failed to process file';
+            toast.error(msg, { id: loadingId });
+            setInviteFile(null);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -319,12 +355,15 @@ export function PollCreationDrawer({
             selectedUsers.forEach((id, index) => {
                 formDataToSend.append(`invite_user_ids[${index}]`, String(id));
             });
-            selectedDepartments.forEach((id, index) => {
-                formDataToSend.append(
-                    `invite_department_ids[${index}]`,
-                    String(id),
-                );
-            });
+            if (inviteFile) {
+                formDataToSend.append('invite_file', inviteFile);
+            }
+            if (reviewedUsers.length > 0) {
+                 reviewedUsers.forEach((user, index) => {
+                     formDataToSend.append(`invite_users_list[${index}][email]`, user.email);
+                     formDataToSend.append(`invite_users_list[${index}][name]`, user.name);
+                 });
+            }
         }
 
         // Determine base URL based on context
@@ -414,12 +453,25 @@ export function PollCreationDrawer({
                     formData={formData}
                     errors={errors}
                     onFormDataChange={handleFormDataChange}
-                    departments={departments}
                     users={users}
-                    selectedDepartments={selectedDepartments}
                     selectedUsers={selectedUsers}
-                    onDepartmentsChange={setSelectedDepartments}
                     onUsersChange={setSelectedUsers}
+                    inviteFile={inviteFile}
+                    onInviteFileChange={handleFileChange}
+                    inviteListCount={reviewedUsers.length}
+                    onViewInviteList={() => setIsReviewModalOpen(true)}
+                    onClearInviteList={() => setReviewedUsers([])}
+                />
+
+                <PollInviteReviewModal
+                    isOpen={isReviewModalOpen}
+                    onClose={() => setIsReviewModalOpen(false)}
+                    users={reviewedUsers}
+                    onConfirm={(users) => {
+                         setReviewedUsers(users);
+                         // Keep modal open or close? Usually close.
+                         // Implementation inside modal handles commit, logic here is just state update
+                    }}
                 />
 
                 {/* Type-Specific Options */}

@@ -40,6 +40,8 @@ class UpdatePollRequest extends FormRequest
             'invite_user_ids.*' => ['integer', 'exists:users,id'],
             'invite_department_ids' => ['nullable', 'array'],
             'invite_department_ids.*' => ['integer', 'exists:departments,id'],
+            'invite_users_list' => ['nullable', 'array'],
+            'invite_users_list.*.email' => ['required', 'email'],
         ];
 
         // Add profile poll validation rules when poll_type is 'profile'
@@ -75,7 +77,7 @@ class UpdatePollRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Default poll_type to 'standard' if not provided
-        if (! $this->has('poll_type')) {
+        if (!$this->has('poll_type')) {
             $this->merge([
                 'poll_type' => Poll::POLL_TYPE_STANDARD,
             ]);

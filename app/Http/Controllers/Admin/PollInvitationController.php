@@ -228,4 +228,58 @@ class PollInvitationController extends Controller
             'totalInvitedUsers' => $poll->getAllInvitedUsers()->count(),
         ]);
     }
+
+    /**
+     * Preview poll invitation file.
+     */
+    public function previewFile(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+        ]);
+
+        $file = $request->file('file');
+
+        $rows = [];
+        $index = 0;
+
+        try {
+            $path = $file->getRealPath();
+            $extension = $file->getClientOriginalExtension();
+
+            // SimpleExcelReader requires explicit type for temp files without extension
+            $reader = \Spatie\SimpleExcel\SimpleExcelReader::create($path, $extension);
+
+            $reader->getRows()->each(function (array $row) use (&$rows, &$index) {
+                // Normalize keys to lowercase for robust detection
+                $normalizedRow = array_change_key_case($row, CASE_LOWER);
+
+                // Try to find email column
+                $emailKey = collect(array_keys($normalizedRow))->first(function ($key) {
+                    return str_contains($key, 'email') || $key === 'e-mail';
+                });
+
+                // Try to find name column
+                $nameKey = collect(array_keys($normalizedRow))->first(function ($key) {
+                    return str_contains($key, 'name');
+                });
+
+                if ($emailKey && !empty($normalizedRow[$emailKey])) {
+                    $rows[] = [
+                        'id' => $index++, // Temporary ID for frontend keying
+                        'email' => trim($normalizedRow[$emailKey]),
+                        'name' => $nameKey && !empty($normalizedRow[$nameKey]) ? trim($normalizedRow[$nameKey]) : '',
+                    ];
+                }
+            });
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to parse file. Please ensure it is a valid Excel or CSV file.',
+                'error' => $e->getMessage()
+            ], 422);
+        }
+
+        return response()->json(['users' => $rows]);
+    }
 }

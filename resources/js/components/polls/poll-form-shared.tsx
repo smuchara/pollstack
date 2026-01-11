@@ -30,13 +30,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
-export interface Department {
-    id: number;
-    name: string;
-    slug: string;
-    users_count: number;
-    is_default: boolean;
-}
 
 export interface User {
     id: number;
@@ -69,36 +62,31 @@ interface PollFormSharedProps {
         field: K,
         value: PollFormData[K],
     ) => void;
-    departments?: Department[];
     users?: User[];
-    selectedDepartments: number[];
     selectedUsers: number[];
-    onDepartmentsChange: (ids: number[]) => void;
     onUsersChange: (ids: number[]) => void;
+    inviteFile?: File | null;
+    onInviteFileChange?: (file: File | null) => void;
+    inviteListCount?: number;
+    onViewInviteList?: () => void;
+    onClearInviteList?: () => void;
 }
 
 export function PollFormShared({
     formData,
     errors = {},
     onFormDataChange,
-    departments = [],
     users = [],
-    selectedDepartments,
     selectedUsers,
-    onDepartmentsChange,
     onUsersChange,
+    inviteFile,
+    onInviteFileChange,
+    inviteListCount = 0,
+    onViewInviteList,
+    onClearInviteList,
 }: PollFormSharedProps) {
     const [userSearchQuery, setUserSearchQuery] = useState('');
 
-    const toggleDepartment = (deptId: number) => {
-        if (selectedDepartments.includes(deptId)) {
-            onDepartmentsChange(
-                selectedDepartments.filter((id) => id !== deptId),
-            );
-        } else {
-            onDepartmentsChange([...selectedDepartments, deptId]);
-        }
-    };
 
     const toggleUser = (userId: number) => {
         if (selectedUsers.includes(userId)) {
@@ -115,10 +103,7 @@ export function PollFormShared({
     );
 
     const getTotalInvitedCount = () => {
-        const deptUserCount = departments
-            .filter((d) => selectedDepartments.includes(d.id))
-            .reduce((sum, d) => sum + d.users_count, 0);
-        return deptUserCount + selectedUsers.length;
+        return selectedUsers.length + inviteListCount;
     };
 
     return (
@@ -238,19 +223,11 @@ export function PollFormShared({
                         </Badge>
                     </div>
 
-                    <Tabs defaultValue="departments" className="w-full">
+                    <Tabs defaultValue="bulk" className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="departments" className="gap-2">
-                                <Building2 className="h-4 w-4" />
-                                Departments
-                                {selectedDepartments.length > 0 && (
-                                    <Badge
-                                        variant="default"
-                                        className="ml-1 h-5 px-1.5"
-                                    >
-                                        {selectedDepartments.length}
-                                    </Badge>
-                                )}
+                            <TabsTrigger value="bulk" className="gap-2">
+                                <Users className="h-4 w-4" />
+                                Bulk Invite
                             </TabsTrigger>
                             <TabsTrigger value="users" className="gap-2">
                                 <Users className="h-4 w-4" />
@@ -266,68 +243,63 @@ export function PollFormShared({
                             </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="departments" className="mt-4">
-                            <div className="space-y-3">
-                                <p className="text-sm text-muted-foreground">
-                                    Select departments to invite all their
-                                    members at once.
-                                </p>
-                                <div className="grid max-h-48 gap-2 overflow-y-auto">
-                                    {departments.map((dept) => (
-                                        <div
-                                            key={dept.id}
-                                            className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors ${
-                                                selectedDepartments.includes(
-                                                    dept.id,
-                                                )
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-border hover:bg-muted/50'
-                                            }`}
-                                            onClick={() =>
-                                                toggleDepartment(dept.id)
-                                            }
+                        <TabsContent value="bulk" className="mt-4">
+                            {inviteListCount > 0 ? (
+                                <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center dark:border-green-900/30 dark:bg-green-900/10">
+                                    <Check className="mx-auto mb-2 h-8 w-8 text-green-500" />
+                                    <p className="font-medium text-green-700 dark:text-green-400">
+                                        {inviteListCount} users ready to invite
+                                    </p>
+                                    <div className="mt-3 flex justify-center gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={onViewInviteList}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <Checkbox
-                                                    checked={selectedDepartments.includes(
-                                                        dept.id,
-                                                    )}
-                                                    onCheckedChange={() =>
-                                                        toggleDepartment(
-                                                            dept.id,
-                                                        )
-                                                    }
-                                                />
-                                                <div>
-                                                    <p className="font-medium">
-                                                        {dept.name}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {dept.users_count}{' '}
-                                                        member
-                                                        {dept.users_count !== 1
-                                                            ? 's'
-                                                            : ''}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {dept.is_default && (
-                                                <Badge
-                                                    variant="outline"
-                                                    className="text-xs"
-                                                >
-                                                    Default
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {departments.length === 0 && (
-                                        <p className="py-4 text-center text-sm text-muted-foreground">
-                                            No departments available.
-                                        </p>
-                                    )}
+                                            Review List
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={onClearInviteList}
+                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                        >
+                                            Clear
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <Label>Upload Excel / CSV</Label>
+                                    <div className="rounded-lg border border-dashed p-6 text-center hover:bg-muted/50">
+                                        <Input
+                                            type="file"
+                                            accept=".xlsx,.xls,.csv"
+                                            className="mx-auto max-w-xs"
+                                            onChange={(e) => {
+                                                if (
+                                                    e.target.files?.[0] &&
+                                                    onInviteFileChange
+                                                ) {
+                                                    onInviteFileChange(
+                                                        e.target.files[0],
+                                                    );
+                                                }
+                                            }}
+                                        />
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Upload a list of emails to invite.
+                                        </p>
+                                        {inviteFile && (
+                                            <p className="mt-2 text-sm font-medium text-primary">
+                                                Selected: {inviteFile.name}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </TabsContent>
 
                         <TabsContent value="users" className="mt-4">
@@ -415,7 +387,7 @@ export function PollFormShared({
                         </TabsContent>
                     </Tabs>
 
-                    {(selectedDepartments.length > 0 ||
+                    {(inviteFile ||
                         selectedUsers.length > 0) && (
                         <div className="flex items-center gap-2 border-t pt-2 text-sm">
                             <Check className="h-4 w-4 text-green-500" />

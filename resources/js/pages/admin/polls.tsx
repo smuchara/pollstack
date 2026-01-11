@@ -1,6 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
-    Building2,
     Calendar,
     Edit,
     Eye,
@@ -52,13 +51,7 @@ interface PollOption {
     position?: string | null;
 }
 
-interface Department {
-    id: number;
-    name: string;
-    slug: string;
-    users_count: number;
-    is_default: boolean;
-}
+
 
 interface User {
     id: number;
@@ -88,9 +81,7 @@ interface Poll {
         name: string;
     } | null;
     invited_users_count?: number;
-    invited_departments_count?: number;
     invitedUsers?: User[];
-    invitedDepartments?: Department[];
 }
 
 interface Props {
@@ -100,13 +91,12 @@ interface Props {
         last_page: number;
         total: number;
     };
-    departments: Department[];
     users: User[];
 }
 
 import CreatePollModal from '@/components/polls/create-poll-modal';
 
-export default function PollsIndex({ polls, departments, users }: Props) {
+export default function PollsIndex({ polls, users }: Props) {
     const { props } = usePage<{ organization_slug: string }>();
     const orgSlug = props.organization_slug;
 
@@ -222,20 +212,7 @@ export default function PollsIndex({ polls, departments, users }: Props) {
                                         {/* Invitation Info for invite-only polls */}
                                         {poll.visibility === 'invite_only' && (
                                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                {poll.invited_departments_count !==
-                                                    undefined &&
-                                                    poll.invited_departments_count >
-                                                        0 && (
-                                                        <div className="flex items-center gap-1">
-                                                            <Building2 className="h-4 w-4" />
-                                                            <span>
-                                                                {
-                                                                    poll.invited_departments_count
-                                                                }{' '}
-                                                                dept
-                                                            </span>
-                                                        </div>
-                                                    )}
+
                                                 {poll.invited_users_count !==
                                                     undefined &&
                                                     poll.invited_users_count >
@@ -390,7 +367,6 @@ export default function PollsIndex({ polls, departments, users }: Props) {
                 poll={pollToEdit}
                 context="organization"
                 organizationSlug={orgSlug}
-                departments={departments}
                 users={users}
             />
         </AppLayout>

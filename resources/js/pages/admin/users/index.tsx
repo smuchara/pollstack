@@ -1,7 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ColumnDef, PaginationState, Updater, Row } from '@tanstack/react-table';
-import { Edit, Trash2, ArrowUpDown, Filter, Pin, Shield, Mail, ShieldCheck } from 'lucide-react';
+import { Edit, Trash2, ArrowUpDown, Filter, Pin, Shield, ShieldCheck } from 'lucide-react';
 
 // Components
 import AppLayout from '@/layouts/app-layout';
@@ -10,7 +10,7 @@ import { useRole } from '@/components/role-guard';
 import { TipsDialog } from '@/components/ui/tips-dialog';
 import { RoleBadge } from '@/components/ui/role-badge';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { InviteUsersModal } from '@/components/invite-users-modal';
+
 import { BulkInviteModal } from '@/components/BulkInviteModal';
 import { Upload } from 'lucide-react';
 
@@ -98,7 +98,7 @@ export default function UsersList({ users, pagination, permission_groups = [], p
     pageSize: pagination.per_page,
   });
 
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
   const [isBulkInviteModalOpen, setIsBulkInviteModalOpen] = useState(false);
 
   const dashboardUrl = user?.is_super_admin
@@ -308,15 +308,8 @@ export default function UsersList({ users, pagination, permission_groups = [], p
               {isAdmin() && (
                 <>
                   <button
-                    onClick={() => setIsInviteModalOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-95"
-                  >
-                    <Mail className="h-4 w-4" />
-                    <span>Invite Users</span>
-                  </button>
-                  <button
                     onClick={() => setIsBulkInviteModalOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-all hover:bg-accent hover:text-accent-foreground active:scale-95 ml-2"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-95"
                   >
                     <Upload className="h-4 w-4" />
                     <span>Bulk Invite</span>
@@ -346,11 +339,7 @@ export default function UsersList({ users, pagination, permission_groups = [], p
       </div>
 
       {/* Invite Users Modal */}
-      <InviteUsersModal
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
-        permissionGroups={permission_groups}
-      />
+
       <BulkInviteModal
         isOpen={isBulkInviteModalOpen}
         onClose={() => setIsBulkInviteModalOpen(false)}

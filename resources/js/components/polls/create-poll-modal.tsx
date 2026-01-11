@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 
 import { Poll, PollCreationDrawer } from './poll-creation-drawer';
-import { Department, User } from './poll-form-shared';
+import { User } from './poll-form-shared';
 import { PollType, PollTypeSelector } from './poll-type-selector';
 
 interface CreatePollModalProps {
@@ -21,7 +21,6 @@ interface CreatePollModalProps {
     poll?: Poll;
     context?: 'super-admin' | 'organization';
     organizationSlug?: string;
-    departments?: Department[];
     users?: User[];
 }
 
@@ -33,7 +32,6 @@ export default function CreatePollModal({
     poll,
     context = 'super-admin',
     organizationSlug,
-    departments = [],
     users = [],
 }: CreatePollModalProps) {
     const [stage, setStage] = useState<ModalStage>('select-type');
@@ -97,7 +95,6 @@ export default function CreatePollModal({
                 poll={poll}
                 context={context}
                 organizationSlug={organizationSlug}
-                departments={departments}
                 users={users}
             />
         );
@@ -153,7 +150,6 @@ export default function CreatePollModal({
                 pollType={selectedType || 'standard'}
                 context={context}
                 organizationSlug={organizationSlug}
-                departments={departments}
                 users={users}
             />
         </>

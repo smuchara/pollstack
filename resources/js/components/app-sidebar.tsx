@@ -96,11 +96,7 @@ export function AppSidebar() {
                 href: `${tenantBaseUrl}/users`,
                 icon: Users,
             });
-            userItems.push({
-                title: 'Departments',
-                href: `${tenantBaseUrl}/departments`,
-                icon: Building2,
-            });
+
         }
         if (user?.is_super_admin) {
             userItems.push({

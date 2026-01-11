@@ -89,6 +89,7 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::get('polls/{poll}/invitations', [\App\Http\Controllers\Admin\PollInvitationController::class, 'getInvitations'])->name('polls.invitations.index');
     Route::get('polls/{poll}/available-users', [\App\Http\Controllers\Admin\PollInvitationController::class, 'availableUsers'])->name('polls.invitations.available-users');
     Route::get('polls/{poll}/available-departments', [\App\Http\Controllers\Admin\PollInvitationController::class, 'availableDepartments'])->name('polls.invitations.available-departments');
+    Route::post('polls/invite-preview', [\App\Http\Controllers\Admin\PollInvitationController::class, 'previewFile'])->name('polls.invitations.preview');
     Route::post('polls/{poll}/invite-users', [\App\Http\Controllers\Admin\PollInvitationController::class, 'inviteUsers'])->name('polls.invitations.invite-users');
     Route::post('polls/{poll}/invite-departments', [\App\Http\Controllers\Admin\PollInvitationController::class, 'inviteDepartments'])->name('polls.invitations.invite-departments');
     Route::delete('polls/{poll}/invitations/users/{user}', [\App\Http\Controllers\Admin\PollInvitationController::class, 'revokeUserInvitation'])->name('polls.invitations.revoke-user');
