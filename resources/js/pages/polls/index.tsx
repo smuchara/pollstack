@@ -21,6 +21,10 @@ interface PollOption {
     text: string;
     order: number;
     votes_count?: number;
+    image_url?: string | null;
+    image_full_url?: string | null;
+    name?: string | null;
+    position?: string | null;
 }
 
 interface Poll {
@@ -28,6 +32,7 @@ interface Poll {
     question: string;
     description: string | null;
     type: 'open' | 'closed';
+    poll_type?: 'standard' | 'profile';
     status: 'scheduled' | 'active' | 'ended' | 'archived';
     start_at: string | null;
     end_at: string | null;
@@ -135,7 +140,23 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
                                     {poll.user_vote?.poll_option_id === option.id && (
                                         <CheckCircle2 className="h-4 w-4 text-primary" />
                                     )}
-                                    {option.text}
+                                    {poll.poll_type === 'profile' ? (
+                                        <div className="flex items-center gap-2">
+                                            {option.image_full_url && (
+                                                <img 
+                                                    src={option.image_full_url} 
+                                                    alt={option.name || option.text} 
+                                                    className="w-6 h-6 rounded-full object-cover"
+                                                />
+                                            )}
+                                            <span>{option.name || option.text}</span>
+                                            {option.position && (
+                                                <span className="text-xs text-muted-foreground">({option.position})</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        option.text
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -143,27 +164,78 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
                 ) : (
                     <div className="space-y-3">
                         <Label className="text-sm font-medium">Select your choice:</Label>
-                        <RadioGroup
-                            value={selectedOptions[poll.id]?.toString()}
-                            onValueChange={(value) =>
-                                setSelectedOptions({
-                                    ...selectedOptions,
-                                    [poll.id]: parseInt(value),
-                                })
-                            }
-                        >
-                            {poll.options.map((option) => (
-                                <div key={option.id} className="flex items-center space-x-2">
-                                    <RadioGroupItem value={option.id.toString()} id={`poll-${poll.id}-option-${option.id}`} />
-                                    <Label
-                                        htmlFor={`poll-${poll.id}-option-${option.id}`}
-                                        className="flex-1 cursor-pointer text-sm"
+                        
+                        {poll.poll_type === 'profile' ? (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {poll.options.map((option) => (
+                                    <div
+                                        key={option.id}
+                                        onClick={() => setSelectedOptions({
+                                            ...selectedOptions,
+                                            [poll.id]: option.id
+                                        })}
+                                        className={`
+                                            cursor-pointer relative flex flex-col items-center p-4 rounded-xl border-2 transition-all hover:bg-muted/50
+                                            ${selectedOptions[poll.id] === option.id 
+                                                ? 'border-primary bg-primary/5 ring-1 ring-primary' 
+                                                : 'border-border hover:border-sidebar-accent'
+                                            }
+                                        `}
                                     >
-                                        {option.text}
-                                    </Label>
-                                </div>
-                            ))}
-                        </RadioGroup>
+                                        <div className="mb-3 relative">
+                                            {option.image_full_url ? (
+                                                <img 
+                                                    src={option.image_full_url} 
+                                                    alt={option.name || option.text}
+                                                    className="h-16 w-16 rounded-full object-cover ring-2 ring-background shadow-sm"
+                                                />
+                                            ) : (
+                                                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary ring-2 ring-background">
+                                                    {(option.name || option.text).charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
+                                            {selectedOptions[poll.id] === option.id && (
+                                                <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-md">
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="text-center w-full space-y-0.5">
+                                            <div className="font-semibold text-sm truncate w-full" title={option.name || option.text}>
+                                                {option.name || option.text}
+                                            </div>
+                                            {option.position && (
+                                                <div className="text-xs text-muted-foreground truncate w-full" title={option.position}>
+                                                    {option.position}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <RadioGroup
+                                value={selectedOptions[poll.id]?.toString()}
+                                onValueChange={(value) =>
+                                    setSelectedOptions({
+                                        ...selectedOptions,
+                                        [poll.id]: parseInt(value),
+                                    })
+                                }
+                            >
+                                {poll.options.map((option) => (
+                                    <div key={option.id} className="flex items-center space-x-2">
+                                        <RadioGroupItem value={option.id.toString()} id={`poll-${poll.id}-option-${option.id}`} />
+                                        <Label
+                                            htmlFor={`poll-${poll.id}-option-${option.id}`}
+                                            className="flex-1 cursor-pointer text-sm"
+                                        >
+                                            {option.text}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </RadioGroup>
+                        )}
                     </div>
                 )}
 
@@ -214,11 +286,36 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
                 <div className="space-y-3">
                     <Label className="text-sm font-medium text-muted-foreground">Options Preview:</Label>
                     <div className="space-y-2">
-                         {poll.options.map((option) => (
-                            <div key={option.id} className="text-sm border rounded px-3 py-2 bg-muted/30 text-muted-foreground">
-                                {option.text}
+                         {poll.poll_type === 'profile' ? (
+                            <div className="flex -space-x-2 overflow-hidden py-1">
+                                {poll.options.slice(0, 5).map((option) => (
+                                    <div key={option.id} className="relative rounded-full ring-2 ring-background">
+                                        {option.image_full_url ? (
+                                            <img
+                                                src={option.image_full_url}
+                                                alt={option.name || option.text}
+                                                className="w-8 h-8 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                                                {(option.name || option.text).charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {poll.options.length > 5 && (
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted ring-2 ring-background text-xs font-medium">
+                                        +{poll.options.length - 5}
+                                    </div>
+                                )}
                             </div>
-                        ))}
+                         ) : (
+                            poll.options.map((option) => (
+                                <div key={option.id} className="text-sm border rounded px-3 py-2 bg-muted/30 text-muted-foreground">
+                                    {option.text}
+                                </div>
+                            ))
+                         )}
                     </div>
                 </div>
 
@@ -276,8 +373,20 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
                         return (
                             <div key={option.id} className="space-y-1">
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className={isUserChoice ? 'font-medium' : ''}>
-                                        {option.text} {isUserChoice && <CheckCircle2 className="inline h-3 w-3 text-primary ml-1" />}
+                                    <span className={`flex items-center gap-2 ${isUserChoice ? 'font-medium' : ''}`}>
+                                        {poll.poll_type === 'profile' && option.image_full_url && (
+                                            <img
+                                                src={option.image_full_url}
+                                                alt=""
+                                                className="w-5 h-5 rounded-full object-cover"
+                                            />
+                                        )}
+                                        {poll.poll_type === 'profile' && !option.image_full_url && (
+                                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                                                {(option.name || option.text).charAt(0).toUpperCase()}
+                                            </div>
+                                        )}
+                                        {option.name || option.text} {isUserChoice && <CheckCircle2 className="inline h-3 w-3 text-primary ml-1" />}
                                     </span>
                                     <span className="text-muted-foreground">{percentage}%</span>
                                 </div>

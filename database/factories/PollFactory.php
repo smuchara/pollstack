@@ -18,9 +18,10 @@ class PollFactory extends Factory
     public function definition(): array
     {
         return [
-            'question' => $this->faker->sentence().'?',
+            'question' => $this->faker->sentence() . '?',
             'description' => $this->faker->optional()->paragraph(),
             'type' => $this->faker->randomElement(['open', 'closed']),
+            'poll_type' => Poll::POLL_TYPE_STANDARD,
             'visibility' => Poll::VISIBILITY_PUBLIC,
             'status' => 'active',
             'start_at' => now(),
@@ -46,11 +47,40 @@ class PollFactory extends Factory
     }
 
     /**
+     * Indicate that the poll is a profile poll.
+     */
+    public function profilePoll(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'poll_type' => Poll::POLL_TYPE_PROFILE,
+        ]);
+    }
+
+    /**
+     * Indicate that the poll is a profile poll with options.
+     */
+    public function withProfileOptions(int $count = 3): static
+    {
+        return $this->profilePoll()->afterCreating(function (\App\Models\Poll $poll) use ($count) {
+            $positions = ['President', 'Vice President', 'Secretary', 'Treasurer', 'Board Member'];
+            for ($i = 0; $i < $count; $i++) {
+                $poll->options()->create([
+                    'text' => fake()->name(),
+                    'name' => fake()->name(),
+                    'position' => $positions[$i % count($positions)],
+                    'image_url' => null,
+                    'order' => $i,
+                ]);
+            }
+        });
+    }
+
+    /**
      * Indicate that the poll is invite-only.
      */
     public function inviteOnly(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'visibility' => Poll::VISIBILITY_INVITE_ONLY,
         ]);
     }
@@ -60,7 +90,7 @@ class PollFactory extends Factory
      */
     public function public(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'visibility' => Poll::VISIBILITY_PUBLIC,
         ]);
     }

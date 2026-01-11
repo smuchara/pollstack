@@ -20,10 +20,18 @@ class Poll extends Model
 
     public const VISIBILITY_INVITE_ONLY = 'invite_only';
 
+    /**
+     * Poll type constants.
+     */
+    public const POLL_TYPE_STANDARD = 'standard';
+
+    public const POLL_TYPE_PROFILE = 'profile';
+
     protected $fillable = [
         'question',
         'description',
         'type',
+        'poll_type',
         'visibility',
         'status',
         'start_at',
@@ -148,10 +156,10 @@ class Poll extends Model
                             })
                                 // Or invited via department
                                 ->orWhereHas('invitedDepartments', function ($deptQ) use ($user) {
-                                $deptQ->whereHas('users', function ($userQ) use ($user) {
-                                    $userQ->where('users.id', $user->id);
+                                    $deptQ->whereHas('users', function ($userQ) use ($user) {
+                                        $userQ->where('users.id', $user->id);
+                                    });
                                 });
-                            });
                         });
                 });
         });
@@ -162,7 +170,7 @@ class Poll extends Model
      */
     public function hasEnded(): bool
     {
-        if (!$this->end_at) {
+        if (! $this->end_at) {
             return false;
         }
 
@@ -178,7 +186,7 @@ class Poll extends Model
             return false;
         }
 
-        if (!$this->start_at) {
+        if (! $this->start_at) {
             return false;
         }
 
@@ -274,7 +282,7 @@ class Poll extends Model
         }
 
         // Check visibility - invite-only polls require invitation
-        if ($this->isInviteOnly() && !$this->isUserInvited($user)) {
+        if ($this->isInviteOnly() && ! $this->isUserInvited($user)) {
             return false;
         }
 
@@ -285,7 +293,6 @@ class Poll extends Model
      * Invite individual users to this poll.
      *
      * @param  array<int>  $userIds
-     * @return array
      */
     public function inviteUsers(array $userIds, ?int $invitedById = null): array
     {
@@ -296,6 +303,7 @@ class Poll extends Model
                 'invited_at' => now(),
             ];
         }
+
         return $this->invitedUsers()->syncWithoutDetaching($data);
     }
 
@@ -303,7 +311,6 @@ class Poll extends Model
      * Invite departments to this poll (QuickInvite™).
      *
      * @param  array<int>  $departmentIds
-     * @return array
      */
     public function inviteDepartments(array $departmentIds, ?int $invitedById = null): array
     {
@@ -314,6 +321,7 @@ class Poll extends Model
                 'invited_at' => now(),
             ];
         }
+
         return $this->invitedDepartments()->syncWithoutDetaching($data);
     }
 
@@ -352,5 +360,37 @@ class Poll extends Model
         })->pluck('id');
 
         return User::whereIn('id', $directUsers->merge($departmentUserIds)->unique())->get();
+    }
+
+    /**
+     * Check if the poll is a standard (text-based) poll.
+     */
+    public function isStandardPoll(): bool
+    {
+        return $this->poll_type === self::POLL_TYPE_STANDARD;
+    }
+
+    /**
+     * Check if the poll is a profile (image-based) poll.
+     */
+    public function isProfilePoll(): bool
+    {
+        return $this->poll_type === self::POLL_TYPE_PROFILE;
+    }
+
+    /**
+     * Scope a query to only include standard polls.
+     */
+    public function scopeStandardPolls($query)
+    {
+        return $query->where('poll_type', self::POLL_TYPE_STANDARD);
+    }
+
+    /**
+     * Scope a query to only include profile polls.
+     */
+    public function scopeProfilePolls($query)
+    {
+        return $query->where('poll_type', self::POLL_TYPE_PROFILE);
     }
 }

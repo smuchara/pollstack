@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StorePollRequest;
+use App\Http\Requests\Admin\UpdatePollRequest;
 use App\Mail\PollInvitation;
 use App\Models\Department;
 use App\Models\Poll;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PollController extends Controller
@@ -68,26 +70,10 @@ class PollController extends Controller
     /**
      * Store a newly created poll for the organization.
      */
-    public function store(Request $request)
+    public function store(StorePollRequest $request)
     {
         $organization = app('organization');
-
-        $validated = $request->validate([
-            'question' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'type' => 'required|string|in:open,closed',
-            'visibility' => 'required|string|in:public,invite_only',
-            'status' => 'required|string|in:scheduled,active,ended,archived',
-            'start_at' => 'nullable|date',
-            'end_at' => 'nullable|date|after_or_equal:start_at',
-            'options' => 'required|array|min:2',
-            'options.*.text' => 'required|string|max:255',
-            // Optional: invite users/departments immediately when creating an invite-only poll
-            'invite_user_ids' => 'nullable|array',
-            'invite_user_ids.*' => 'integer|exists:users,id',
-            'invite_department_ids' => 'nullable|array',
-            'invite_department_ids.*' => 'integer|exists:departments,id',
-        ]);
+        $validated = $request->validated();
 
         // Determine actual status based on timing
         $status = $this->determineStatus($validated['status'], $validated['start_at'] ?? null, $validated['end_at'] ?? null);
@@ -97,51 +83,21 @@ class PollController extends Controller
                 'question' => $validated['question'],
                 'description' => $validated['description'] ?? null,
                 'type' => $validated['type'],
+                'poll_type' => $validated['poll_type'] ?? Poll::POLL_TYPE_STANDARD,
                 'visibility' => $validated['visibility'],
                 'status' => $status,
                 'start_at' => $validated['start_at'] ?? null,
                 'end_at' => $validated['end_at'] ?? null,
-                'organization_id' => $organization->id, // Automatically scope to organization
+                'organization_id' => $organization->id,
                 'created_by' => $request->user()->id,
             ]);
 
-            foreach ($validated['options'] as $index => $optionData) {
-                $poll->options()->create([
-                    'text' => $optionData['text'],
-                    'order' => $index,
-                ]);
-            }
+            // Create poll options
+            $this->createPollOptions($poll, $validated['options'], $validated['poll_type'] ?? Poll::POLL_TYPE_STANDARD);
 
             // Handle immediate invitations for invite-only polls
             if ($validated['visibility'] === Poll::VISIBILITY_INVITE_ONLY) {
-                if (!empty($validated['invite_user_ids'])) {
-                    $changes = $poll->inviteUsers($validated['invite_user_ids'], $request->user()->id);
-
-                    // Send email notifications
-                    $newlyInvitedIds = $changes['attached'];
-                    if (!empty($newlyInvitedIds)) {
-                        $usersToInvite = User::whereIn('id', $newlyInvitedIds)->get();
-                        foreach ($usersToInvite as $user) {
-                            Mail::to($user)->queue(new PollInvitation($poll, $user));
-                        }
-                    }
-                }
-
-                if (!empty($validated['invite_department_ids'])) {
-                    $changes = $poll->inviteDepartments($validated['invite_department_ids'], $request->user()->id);
-
-                    // Send email notifications for departments
-                    $newlyInvitedDeptIds = $changes['attached'];
-                    if (!empty($newlyInvitedDeptIds)) {
-                        $usersInDepts = User::whereHas('departments', function ($query) use ($newlyInvitedDeptIds) {
-                            $query->whereIn('departments.id', $newlyInvitedDeptIds);
-                        })->get();
-
-                        foreach ($usersInDepts as $user) {
-                            Mail::to($user)->queue(new PollInvitation($poll, $user));
-                        }
-                    }
-                }
+                $this->handleInvitations($poll, $validated, $request->user()->id);
             }
         });
 
@@ -151,7 +107,7 @@ class PollController extends Controller
     /**
      * Update the specified organization poll.
      */
-    public function update(Request $request, Poll $poll)
+    public function update(UpdatePollRequest $request, Poll $poll)
     {
         $organization = app('organization');
 
@@ -165,18 +121,7 @@ class PollController extends Controller
             return back()->with('error', 'Cannot edit polls that are active or have ended. This ensures voting integrity and prevents data manipulation.');
         }
 
-        $validated = $request->validate([
-            'question' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'type' => 'required|string|in:open,closed',
-            'visibility' => 'required|string|in:public,invite_only',
-            'status' => 'required|string|in:scheduled,active,ended,archived',
-            'start_at' => 'nullable|date',
-            'end_at' => 'nullable|date|after_or_equal:start_at',
-            'options' => 'required|array|min:2',
-            'options.*.id' => 'nullable|exists:poll_options,id',
-            'options.*.text' => 'required|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         // Determine actual status based on timing
         $status = $this->determineStatus($validated['status'], $validated['start_at'] ?? null, $validated['end_at'] ?? null);
@@ -186,36 +131,15 @@ class PollController extends Controller
                 'question' => $validated['question'],
                 'description' => $validated['description'] ?? null,
                 'type' => $validated['type'],
+                'poll_type' => $validated['poll_type'] ?? $poll->poll_type,
                 'visibility' => $validated['visibility'],
                 'status' => $status,
                 'start_at' => $validated['start_at'] ?? null,
                 'end_at' => $validated['end_at'] ?? null,
             ]);
 
-            // Sync Options
-            // 1. Get IDs of options in the request
-            $requestOptionIds = collect($validated['options'])
-                ->pluck('id')
-                ->filter()
-                ->toArray();
-
-            // 2. Delete options not in the request
-            $poll->options()->whereNotIn('id', $requestOptionIds)->delete();
-
-            // 3. Update or Create options
-            foreach ($validated['options'] as $index => $optionData) {
-                if (isset($optionData['id'])) {
-                    $poll->options()->where('id', $optionData['id'])->update([
-                        'text' => $optionData['text'],
-                        'order' => $index,
-                    ]);
-                } else {
-                    $poll->options()->create([
-                        'text' => $optionData['text'],
-                        'order' => $index,
-                    ]);
-                }
-            }
+            // Sync poll options
+            $this->syncPollOptions($poll, $validated['options'], $validated['poll_type'] ?? $poll->poll_type);
         });
 
         return redirect()->back()->with('success', 'Poll updated successfully.');
@@ -231,6 +155,15 @@ class PollController extends Controller
         // Ensure poll belongs to this organization
         if ($poll->organization_id !== $organization->id) {
             abort(403, 'Unauthorized access to poll.');
+        }
+
+        // Delete associated images for profile polls
+        if ($poll->isProfilePoll()) {
+            foreach ($poll->options as $option) {
+                if ($option->image_url) {
+                    Storage::disk('public')->delete($option->image_url);
+                }
+            }
         }
 
         $poll->delete();
@@ -262,12 +195,132 @@ class PollController extends Controller
     }
 
     /**
+     * Create poll options with optional image handling.
+     *
+     * @param  array<int, array<string, mixed>>  $options
+     */
+    private function createPollOptions(Poll $poll, array $options, string $pollType): void
+    {
+        foreach ($options as $index => $optionData) {
+            $imageUrl = null;
+
+            // Handle image upload for profile polls
+            if ($pollType === Poll::POLL_TYPE_PROFILE && isset($optionData['image'])) {
+                $imageUrl = $optionData['image']->store('poll-options', 'public');
+            }
+
+            $poll->options()->create([
+                'text' => $optionData['text'],
+                'image_url' => $imageUrl,
+                'name' => $optionData['name'] ?? null,
+                'position' => $optionData['position'] ?? null,
+                'order' => $index,
+            ]);
+        }
+    }
+
+    /**
+     * Sync poll options (update, create, delete) with image handling.
+     *
+     * @param  array<int, array<string, mixed>>  $options
+     */
+    private function syncPollOptions(Poll $poll, array $options, string $pollType): void
+    {
+        // Get IDs of options in the request
+        $requestOptionIds = collect($options)
+            ->pluck('id')
+            ->filter()
+            ->toArray();
+
+        // Delete options not in the request (and their images)
+        $optionsToDelete = $poll->options()->whereNotIn('id', $requestOptionIds)->get();
+        foreach ($optionsToDelete as $option) {
+            if ($option->image_url) {
+                Storage::disk('public')->delete($option->image_url);
+            }
+            $option->delete();
+        }
+
+        // Update or Create options
+        foreach ($options as $index => $optionData) {
+            $imageUrl = null;
+
+            // Handle image upload for profile polls
+            if ($pollType === Poll::POLL_TYPE_PROFILE && isset($optionData['image'])) {
+                $imageUrl = $optionData['image']->store('poll-options', 'public');
+            }
+
+            if (isset($optionData['id'])) {
+                $existingOption = $poll->options()->where('id', $optionData['id'])->first();
+
+                if ($existingOption) {
+                    // If new image uploaded, delete old one
+                    if ($imageUrl && $existingOption->image_url) {
+                        Storage::disk('public')->delete($existingOption->image_url);
+                    }
+
+                    $existingOption->update([
+                        'text' => $optionData['text'],
+                        'image_url' => $imageUrl ?? $existingOption->image_url,
+                        'name' => $optionData['name'] ?? $existingOption->name,
+                        'position' => $optionData['position'] ?? $existingOption->position,
+                        'order' => $index,
+                    ]);
+                }
+            } else {
+                $poll->options()->create([
+                    'text' => $optionData['text'],
+                    'image_url' => $imageUrl,
+                    'name' => $optionData['name'] ?? null,
+                    'position' => $optionData['position'] ?? null,
+                    'order' => $index,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Handle poll invitations for invite-only polls.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function handleInvitations(Poll $poll, array $validated, int $inviterId): void
+    {
+        if (! empty($validated['invite_user_ids'])) {
+            $changes = $poll->inviteUsers($validated['invite_user_ids'], $inviterId);
+
+            // Send email notifications
+            $newlyInvitedIds = $changes['attached'];
+            if (! empty($newlyInvitedIds)) {
+                $usersToInvite = User::whereIn('id', $newlyInvitedIds)->get();
+                foreach ($usersToInvite as $user) {
+                    Mail::to($user)->queue(new PollInvitation($poll, $user));
+                }
+            }
+        }
+
+        if (! empty($validated['invite_department_ids'])) {
+            $changes = $poll->inviteDepartments($validated['invite_department_ids'], $inviterId);
+
+            // Send email notifications for departments
+            $newlyInvitedDeptIds = $changes['attached'];
+            if (! empty($newlyInvitedDeptIds)) {
+                $usersInDepts = User::whereHas('departments', function ($query) use ($newlyInvitedDeptIds) {
+                    $query->whereIn('departments.id', $newlyInvitedDeptIds);
+                })->get();
+
+                foreach ($usersInDepts as $user) {
+                    Mail::to($user)->queue(new PollInvitation($poll, $user));
+                }
+            }
+        }
+    }
+
+    /**
      * Determine the correct status based on start and end times.
      */
     private function determineStatus(string $requestedStatus, ?string $startAt, ?string $endAt): string
     {
-        $now = now();
-
         // If end time is set and has passed, status must be 'ended'
         if ($endAt && \Carbon\Carbon::parse($endAt)->isPast()) {
             return 'ended';
