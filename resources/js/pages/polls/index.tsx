@@ -10,10 +10,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { PageHeader, EmptyState } from '@/components/common';
 import PollStatusBadge from '@/components/polls/poll-status-badge';
 import PollTypeBadge from '@/components/polls/poll-type-badge';
 import PollTiming from '@/components/polls/poll-timing';
+import { PresenceVerificationGate, type VotingAccessMode } from '@/components/polls/presence-verification-gate';
+import { VotingAccessModeBadge } from '@/components/polls/voting-access-mode-badge';
 import { type BreadcrumbItem } from '@/types';
 
 interface PollOption {
@@ -51,6 +54,13 @@ interface Poll {
         poll_option_id: number;
     };
     total_votes?: number;
+    voting_access_mode?: VotingAccessMode;
+    verification_status?: {
+        is_verified: boolean;
+        verification_type: 'remote' | 'on_premise' | null;
+        can_vote_remotely: boolean;
+        requires_verification: boolean;
+    };
 }
 
 interface Props {
@@ -111,6 +121,9 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
                                 userHasVoted={poll.user_has_voted}
                             />
                             <PollTypeBadge type={poll.type} />
+                            {poll.voting_access_mode && poll.voting_access_mode !== 'remote_only' && (
+                                <VotingAccessModeBadge mode={poll.voting_access_mode} />
+                            )}
                         </div>
                         <CardTitle className="text-lg leading-tight line-clamp-2" title={poll.question}>
                             {poll.question}
@@ -162,81 +175,89 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
                         ))}
                     </div>
                 ) : (
-                    <div className="space-y-3">
-                        <Label className="text-sm font-medium">Select your choice:</Label>
-                        
-                        {poll.poll_type === 'profile' ? (
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                {poll.options.map((option) => (
-                                    <div
-                                        key={option.id}
-                                        onClick={() => setSelectedOptions({
-                                            ...selectedOptions,
-                                            [poll.id]: option.id
-                                        })}
-                                        className={`
-                                            cursor-pointer relative flex flex-col items-center p-4 rounded-xl border-2 transition-all hover:bg-muted/50
-                                            ${selectedOptions[poll.id] === option.id 
-                                                ? 'border-primary bg-primary/5 ring-1 ring-primary' 
-                                                : 'border-border hover:border-sidebar-accent'
-                                            }
-                                        `}
-                                    >
-                                        <div className="mb-3 relative">
-                                            {option.image_full_url ? (
-                                                <img 
-                                                    src={option.image_full_url} 
-                                                    alt={option.name || option.text}
-                                                    className="h-16 w-16 rounded-full object-cover ring-2 ring-background shadow-sm"
-                                                />
-                                            ) : (
-                                                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary ring-2 ring-background">
-                                                    {(option.name || option.text).charAt(0).toUpperCase()}
-                                                </div>
-                                            )}
-                                            {selectedOptions[poll.id] === option.id && (
-                                                <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-md">
-                                                    <CheckCircle2 className="h-4 w-4" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="text-center w-full space-y-0.5">
-                                            <div className="font-semibold text-sm truncate w-full" title={option.name || option.text}>
-                                                {option.name || option.text}
-                                            </div>
-                                            {option.position && (
-                                                <div className="text-xs text-muted-foreground truncate w-full" title={option.position}>
-                                                    {option.position}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <RadioGroup
-                                value={selectedOptions[poll.id]?.toString()}
-                                onValueChange={(value) =>
-                                    setSelectedOptions({
-                                        ...selectedOptions,
-                                        [poll.id]: parseInt(value),
-                                    })
-                                }
-                            >
-                                {poll.options.map((option) => (
-                                    <div key={option.id} className="flex items-center space-x-2">
-                                        <RadioGroupItem value={option.id.toString()} id={`poll-${poll.id}-option-${option.id}`} />
-                                        <Label
-                                            htmlFor={`poll-${poll.id}-option-${option.id}`}
-                                            className="flex-1 cursor-pointer text-sm"
+                    <PresenceVerificationGate
+                        pollId={poll.id}
+                        votingAccessMode={poll.voting_access_mode || 'hybrid'}
+                        isVerified={poll.verification_status?.is_verified || false}
+                        verificationType={poll.verification_status?.verification_type}
+                        onProceed={() => {}}
+                    >
+                        <div className="space-y-3">
+                            <Label className="text-sm font-medium">Select your choice:</Label>
+                            
+                            {poll.poll_type === 'profile' ? (
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {poll.options.map((option) => (
+                                        <div
+                                            key={option.id}
+                                            onClick={() => setSelectedOptions({
+                                                ...selectedOptions,
+                                                [poll.id]: option.id
+                                            })}
+                                            className={`
+                                                cursor-pointer relative flex flex-col items-center p-4 rounded-xl border-2 transition-all hover:bg-muted/50
+                                                ${selectedOptions[poll.id] === option.id 
+                                                    ? 'border-primary bg-primary/5 ring-1 ring-primary' 
+                                                    : 'border-border hover:border-sidebar-accent'
+                                                }
+                                            `}
                                         >
-                                            {option.text}
-                                        </Label>
-                                    </div>
-                                ))}
-                            </RadioGroup>
-                        )}
-                    </div>
+                                            <div className="mb-3 relative">
+                                                {option.image_full_url ? (
+                                                    <img 
+                                                        src={option.image_full_url} 
+                                                        alt={option.name || option.text}
+                                                        className="h-16 w-16 rounded-full object-cover ring-2 ring-background shadow-sm"
+                                                    />
+                                                ) : (
+                                                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary ring-2 ring-background">
+                                                        {(option.name || option.text).charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                {selectedOptions[poll.id] === option.id && (
+                                                    <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-md">
+                                                        <CheckCircle2 className="h-4 w-4" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="text-center w-full space-y-0.5">
+                                                <div className="font-semibold text-sm truncate w-full" title={option.name || option.text}>
+                                                    {option.name || option.text}
+                                                </div>
+                                                {option.position && (
+                                                    <div className="text-xs text-muted-foreground truncate w-full" title={option.position}>
+                                                        {option.position}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <RadioGroup
+                                    value={selectedOptions[poll.id]?.toString()}
+                                    onValueChange={(value) =>
+                                        setSelectedOptions({
+                                            ...selectedOptions,
+                                            [poll.id]: parseInt(value),
+                                        })
+                                    }
+                                >
+                                    {poll.options.map((option) => (
+                                        <div key={option.id} className="flex items-center space-x-2">
+                                            <RadioGroupItem value={option.id.toString()} id={`poll-${poll.id}-option-${option.id}`} />
+                                            <Label
+                                                htmlFor={`poll-${poll.id}-option-${option.id}`}
+                                                className="flex-1 cursor-pointer text-sm"
+                                            >
+                                                {option.text}
+                                            </Label>
+                                        </div>
+                                    ))}
+                                </RadioGroup>
+                            )}
+                        </div>
+                    </PresenceVerificationGate>
                 )}
 
                 {/* Poll Timing Information */}
@@ -442,6 +463,7 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
     );
 
     return (
+        <TooltipProvider>
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Poll Voting" />
 
@@ -527,5 +549,6 @@ export default function PollsIndex({ activePolls, scheduledPolls, endedPolls, co
                 </div>
             </div>
         </AppLayout>
+        </TooltipProvider>
     );
 }

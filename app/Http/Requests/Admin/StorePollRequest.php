@@ -28,6 +28,7 @@ class StorePollRequest extends FormRequest
             'type' => ['required', 'string', 'in:open,closed'],
             'poll_type' => ['sometimes', 'string', 'in:standard,profile'],
             'visibility' => ['required', 'string', 'in:public,invite_only'],
+            'voting_access_mode' => ['sometimes', 'string', 'in:remote_only,on_premise_only,hybrid'],
             'status' => ['required', 'string', 'in:scheduled,active,ended,archived'],
             'start_at' => ['nullable', 'date'],
             'end_at' => ['nullable', 'date', 'after_or_equal:start_at'],
@@ -78,9 +79,16 @@ class StorePollRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Default poll_type to 'standard' if not provided
-        if (!$this->has('poll_type')) {
+        if (! $this->has('poll_type')) {
             $this->merge([
                 'poll_type' => Poll::POLL_TYPE_STANDARD,
+            ]);
+        }
+
+        // Default voting_access_mode to 'hybrid' if not provided
+        if (! $this->has('voting_access_mode')) {
+            $this->merge([
+                'voting_access_mode' => 'hybrid',
             ]);
         }
     }

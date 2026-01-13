@@ -95,6 +95,10 @@ Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(func
     Route::delete('polls/{poll}/invitations/users/{user}', [\App\Http\Controllers\Admin\PollInvitationController::class, 'revokeUserInvitation'])->name('polls.invitations.revoke-user');
     Route::delete('polls/{poll}/invitations/departments/{department}', [\App\Http\Controllers\Admin\PollInvitationController::class, 'revokeDepartmentInvitation'])->name('polls.invitations.revoke-department');
 
+    // Presence Verification Management (QR Code Generator)
+    Route::post('polls/{poll}/presence/generate-qr', [\App\Http\Controllers\PresenceVerificationController::class, 'generateQrCode'])->name('polls.presence.generate-qr');
+    Route::get('polls/{poll}/presence/active-token', [\App\Http\Controllers\PresenceVerificationController::class, 'getActiveQrToken'])->name('polls.presence.active-token');
+
     // Polls voting - organization scoped
     Route::get('polls-voting', [\App\Http\Controllers\PollController::class, 'index'])->name('polls-voting.index');
     Route::post('polls-voting/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('polls-voting.vote');

@@ -47,6 +47,9 @@ class PollController extends Controller
             $poll->invited_users_count = $poll->invitedUsers->count();
             $poll->invited_departments_count = $poll->invitedDepartments->count();
 
+            // Add voting access mode (string value for frontend)
+            $poll->voting_access_mode = $poll->voting_access_mode?->value ?? 'hybrid';
+
             return $poll;
         });
 
@@ -89,6 +92,7 @@ class PollController extends Controller
                 'type' => $validated['type'],
                 'poll_type' => $validated['poll_type'] ?? Poll::POLL_TYPE_STANDARD,
                 'visibility' => $validated['visibility'],
+                'voting_access_mode' => $validated['voting_access_mode'] ?? 'hybrid',
                 'status' => $status,
                 'start_at' => $validated['start_at'] ?? null,
                 'end_at' => $validated['end_at'] ?? null,
@@ -105,7 +109,7 @@ class PollController extends Controller
                 $usersToNotify = $this->handleInvitations($poll, $validated, $request->user()->id);
 
                 // Handle Proxy Assignments
-                if (!empty($request->proxies)) {
+                if (! empty($request->proxies)) {
                     $this->handleProxies($poll, $request->proxies, $request->user()->id);
                 }
             }
@@ -153,6 +157,7 @@ class PollController extends Controller
                 'type' => $validated['type'],
                 'poll_type' => $validated['poll_type'] ?? $poll->poll_type,
                 'visibility' => $validated['visibility'],
+                'voting_access_mode' => $validated['voting_access_mode'] ?? $poll->voting_access_mode,
                 'status' => $status,
                 'start_at' => $validated['start_at'] ?? null,
                 'end_at' => $validated['end_at'] ?? null,
@@ -312,7 +317,7 @@ class PollController extends Controller
         $userIds = $validated['invite_user_ids'] ?? [];
 
         // Handle Excel imported users - lookup by email
-        if (!empty($validated['invite_users_list'])) {
+        if (! empty($validated['invite_users_list'])) {
             $emails = collect($validated['invite_users_list'])->pluck('email')->toArray();
             Log::info('Processing bulk invite list', ['count' => count($emails)]);
 
@@ -330,24 +335,24 @@ class PollController extends Controller
         $userIds = array_unique($userIds);
         Log::info('Total unique user IDs to invite', ['count' => count($userIds)]);
 
-        if (!empty($userIds)) {
+        if (! empty($userIds)) {
             $changes = $poll->inviteUsers($userIds, $inviterId);
 
             // Collect newly invited users
             $newlyInvitedIds = $changes['attached'];
             Log::info('Newly attached users', ['count' => count($newlyInvitedIds)]);
 
-            if (!empty($newlyInvitedIds)) {
+            if (! empty($newlyInvitedIds)) {
                 $usersToNotify = $usersToNotify->merge(User::whereIn('id', $newlyInvitedIds)->get());
             }
         }
 
-        if (!empty($validated['invite_department_ids'])) {
+        if (! empty($validated['invite_department_ids'])) {
             $changes = $poll->inviteDepartments($validated['invite_department_ids'], $inviterId);
 
             // Collect users in newly invited departments
             $newlyInvitedDeptIds = $changes['attached'];
-            if (!empty($newlyInvitedDeptIds)) {
+            if (! empty($newlyInvitedDeptIds)) {
                 $usersInDepts = User::whereHas('departments', function ($query) use ($newlyInvitedDeptIds) {
                     $query->whereIn('departments.id', $newlyInvitedDeptIds);
                 })->get();
@@ -366,7 +371,7 @@ class PollController extends Controller
     {
         Log::info('Handling proxies', ['count' => count($proxies)]);
 
-        // We need to resolve IDs. 
+        // We need to resolve IDs.
         // Frontend sends either real DB IDs (for existing selected users) or temp IDs (from Excel).
         // For Excel users, we need to map Temp ID -> Real DB ID via Email.
 
@@ -381,7 +386,7 @@ class PollController extends Controller
 
         // 2. Resolve Emails to Real IDs
         $emailToRealId = [];
-        if (!empty($tempIdToEmail)) {
+        if (! empty($tempIdToEmail)) {
             $emails = array_values($tempIdToEmail);
             $emailToRealId = User::whereIn('email', $emails)
                 ->where('organization_id', $poll->organization_id)
@@ -412,12 +417,12 @@ class PollController extends Controller
                     ['user_id' => $principalId], // Unique key: A user can only have one proxy
                     [
                         'proxy_user_id' => $proxyUserId,
-                        'created_by' => $creatorId
+                        'created_by' => $creatorId,
                     ]
                 );
                 Log::info("Assigned proxy: User $principalId -> Proxy $proxyUserId");
             } else {
-                Log::warning("Could not resolve proxy assignment", ['principal' => $proxyData['principal_id'], 'proxy' => $proxyData['proxy_id']]);
+                Log::warning('Could not resolve proxy assignment', ['principal' => $proxyData['principal_id'], 'proxy' => $proxyData['proxy_id']]);
             }
         }
     }

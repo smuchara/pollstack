@@ -4,6 +4,7 @@ use App\Models\Organization;
 use App\Models\Poll;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 
 uses(RefreshDatabase::class);
 
@@ -201,4 +202,53 @@ test('regular user cannot access organization admin poll routes', function () {
         ->get("/organization/{$organization->slug}/admin/polls");
 
     $response->assertStatus(403);
+});
+
+test('bulk invite includes unverified users but skips non-existent ones', function () {
+    $organization = Organization::factory()->create();
+    $admin = User::factory()->admin()->create(['organization_id' => $organization->id]);
+
+    $verifiedUser = User::factory()->create(['organization_id' => $organization->id, 'email_verified_at' => now()]);
+    $unverifiedUser = User::factory()->unverified()->create(['organization_id' => $organization->id]);
+
+    $pollData = [
+        'question' => 'Test Poll for Invites',
+        'type' => 'open',
+        'visibility' => 'invite_only',
+        'status' => 'active',
+        'options' => [['text' => 'Option 1'], ['text' => 'Option 2']],
+        'invite_users_list' => [
+            ['email' => $verifiedUser->email],
+            ['email' => $unverifiedUser->email],
+            ['email' => 'ghost@example.com'], // Non-existent
+        ],
+    ];
+
+    $this->actingAs($admin)
+        ->post("/organization/{$organization->slug}/admin/polls", $pollData);
+
+    $poll = Poll::where('question', 'Test Poll for Invites')->first();
+
+    // Check invitations
+    // The poll should have 2 invited users (verified + unverified)
+
+    $invitedCount = DB::table('poll_invitations')
+        ->where('poll_id', $poll->id)
+        ->count();
+
+    expect($invitedCount)->toBe(2);
+
+    // Check specific user invitation
+    $isVerifiedInvited = DB::table('poll_invitations')
+        ->where('poll_id', $poll->id)
+        ->where('user_id', $verifiedUser->id)
+        ->exists();
+
+    $isUnverifiedInvited = DB::table('poll_invitations')
+        ->where('poll_id', $poll->id)
+        ->where('user_id', $unverifiedUser->id)
+        ->exists();
+
+    expect($isVerifiedInvited)->toBeTrue();
+    expect($isUnverifiedInvited)->toBeTrue();
 });

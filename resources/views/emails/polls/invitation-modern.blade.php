@@ -69,7 +69,8 @@
                                             style="font-size: 16px; font-weight: 600; color: #1f2937;">{{ $poll->question }}</span>
                                         @if($poll->description)
                                             <div style="font-size: 14px; color: #6b7280; margin-top: 2px;">
-                                                {{ Str::limit($poll->description, 60) }}</div>
+                                                {{ Str::limit($poll->description, 60) }}
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>
@@ -149,10 +150,20 @@
                                         <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                                             <tr>
                                                 <td style="background-color: #4F46E5; border-radius: 6px;">
-                                                    <a href="{{ route('polls.index') }}" target="_blank"
-                                                        style="display: inline-block; padding: 12px 24px; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px;">
-                                                        Participate Now &rarr;
-                                                    </a>
+                                                    @if($user->hasVerifiedEmail())
+                                                        <a href="{{ route('polls.index') }}" target="_blank"
+                                                            style="display: inline-block; padding: 12px 24px; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px;">
+                                                            Participate Now &rarr;
+                                                        </a>
+                                                    @else
+                                                        <a href="{{ route('login') }}" target="_blank"
+                                                            style="display: inline-block; padding: 12px 24px; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px;">
+                                                            Complete Registration &rarr;
+                                                        </a>
+                                                        <div style="margin-top: 12px; font-size: 12px; color: #9CA3AF;">
+                                                            Please complete your registration to participate in this poll.
+                                                        </div>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         </table>

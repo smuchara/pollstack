@@ -3,18 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Poll;
+use App\Services\PresenceVerificationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class PollController extends Controller
 {
-    /**
-     * Display a listing of active and ended polls for the authenticated user.
-     * Returns separate datasets for active and ended polls with counts.
-     * System polls are ONLY visible to users without an organization (for internal testing).
-     * Organization users only see polls created within their organization.
-     * Invite-only polls are only visible to invited users or users in invited departments.
-     */
+    public function __construct(
+        private PresenceVerificationService $presenceService
+    ) {}
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -31,7 +29,7 @@ class PollController extends Controller
                     'invitedUsers',
                     'invitedDepartments',
                 ])
-                ->when($user->isSuperAdmin() && !$user->organization_id, function ($query) {
+                ->when($user->isSuperAdmin() && ! $user->organization_id, function ($query) {
                     // Super admins without organization see only system-wide polls
                     $query->whereNull('organization_id');
                 })
@@ -41,7 +39,7 @@ class PollController extends Controller
                     $query->where('organization_id', $user->organization_id)
                         ->visibleTo($user);
                 })
-                ->when(!$user->isSuperAdmin() && !$user->organization_id, function ($query) {
+                ->when(! $user->isSuperAdmin() && ! $user->organization_id, function ($query) {
                     // Users without organization see only system-wide polls
                     $query->whereNull('organization_id');
                 })
@@ -87,6 +85,18 @@ class PollController extends Controller
 
             // Add total votes count
             $poll->total_votes = $poll->votes()->count();
+
+            // Add voting access mode (string value for frontend)
+            $poll->voting_access_mode = $poll->voting_access_mode?->value ?? 'hybrid';
+
+            // Add verification status for the user
+            $verificationStatus = $this->presenceService->getUserVerificationStatus($poll, $user);
+            $poll->verification_status = [
+                'is_verified' => $verificationStatus['is_verified'],
+                'verification_type' => $verificationStatus['verification_type']?->value,
+                'can_vote_remotely' => $verificationStatus['can_vote_remotely'],
+                'requires_verification' => $verificationStatus['requires_verification'],
+            ];
 
             return $poll;
         };

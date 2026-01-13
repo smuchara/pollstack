@@ -5,6 +5,7 @@ import {
     Eye,
     EyeOff,
     Plus,
+    QrCode,
     Trash2,
     Users,
 } from 'lucide-react';
@@ -36,7 +37,16 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
+import { QrCodeDisplay } from '@/components/polls/qr-code-display';
+import { VotingAccessModeBadge, type VotingAccessMode } from '@/components/polls/voting-access-mode-badge';
 
 // Types
 import type { BreadcrumbItem } from '@/types';
@@ -82,6 +92,7 @@ interface Poll {
     } | null;
     invited_users_count?: number;
     invitedUsers?: User[];
+    voting_access_mode?: VotingAccessMode;
 }
 
 interface Props {
@@ -114,6 +125,12 @@ export default function PollsIndex({ polls, users }: Props) {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [pollToEdit, setPollToEdit] = useState<Poll | undefined>(undefined);
     const [pollToDelete, setPollToDelete] = useState<Poll | null>(null);
+    const [pollForQr, setPollForQr] = useState<Poll | null>(null);
+
+    // Check if poll supports on-premise verification
+    const supportsOnPremise = (poll: Poll) => {
+        return poll.voting_access_mode && poll.voting_access_mode !== 'remote_only';
+    };
 
     const handleEdit = (poll: Poll) => {
         setPollToEdit(poll);
@@ -192,6 +209,10 @@ export default function PollsIndex({ polls, users }: Props) {
                                                         <Eye className="h-3 w-3" />
                                                         Public
                                                     </Badge>
+                                                )}
+                                                {/* Voting Access Mode Badge */}
+                                                {poll.voting_access_mode && poll.voting_access_mode !== 'remote_only' && (
+                                                    <VotingAccessModeBadge mode={poll.voting_access_mode} showTooltip={false} />
                                                 )}
                                             </div>
                                             <CardTitle
@@ -303,6 +324,17 @@ export default function PollsIndex({ polls, users }: Props) {
                                             Edit
                                         </Button>
                                     )}
+                                    {poll.status === 'active' && supportsOnPremise(poll) && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="flex-1 gap-2 text-primary hover:bg-primary/10"
+                                            onClick={() => setPollForQr(poll)}
+                                        >
+                                            <QrCode className="h-3.5 w-3.5" />
+                                            QR Code
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -369,6 +401,29 @@ export default function PollsIndex({ polls, users }: Props) {
                 organizationSlug={orgSlug}
                 users={users}
             />
+
+            {/* QR Code Modal */}
+            <Dialog open={!!pollForQr} onOpenChange={() => setPollForQr(null)}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <QrCode className="h-5 w-5" />
+                            Presence Verification
+                        </DialogTitle>
+                        <DialogDescription>
+                            Display this QR code at your venue for participants to scan and verify their presence.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {pollForQr && (
+                        <QrCodeDisplay
+                            pollId={pollForQr.id}
+                            organizationSlug={orgSlug}
+                            pollQuestion={pollForQr.question}
+                            autoRefresh={true}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

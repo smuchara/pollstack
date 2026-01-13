@@ -99,6 +99,7 @@ export function PollCreationDrawer({
         description: '',
         type: 'open',
         visibility: 'public',
+        voting_access_mode: 'hybrid',
         start_at: '',
         end_at: '',
     });
@@ -134,6 +135,7 @@ export function PollCreationDrawer({
                     description: poll.description || '',
                     type: poll.type,
                     visibility: poll.visibility || 'public',
+                    voting_access_mode: (poll as any).voting_access_mode || 'hybrid',
                     start_at: poll.start_at
                         ? utcToLocalInput(poll.start_at)
                         : '',
@@ -171,6 +173,7 @@ export function PollCreationDrawer({
                     description: '',
                     type: 'open',
                     visibility: 'public',
+                    voting_access_mode: 'hybrid',
                     start_at: '',
                     end_at: '',
                 });
@@ -305,6 +308,7 @@ export function PollCreationDrawer({
         formDataToSend.append('type', formData.type);
         formDataToSend.append('poll_type', pollType);
         formDataToSend.append('visibility', formData.visibility);
+        formDataToSend.append('voting_access_mode', formData.voting_access_mode);
         formDataToSend.append('status', 'active');
 
         // Handle dates - only append if they have values

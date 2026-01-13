@@ -7,8 +7,11 @@ import {
     Eye,
     EyeOff,
     Globe,
+    Laptop,
     Lock,
+    MapPin,
     Plus,
+    QrCode,
     Users,
     X,
     Zap,
@@ -47,6 +50,7 @@ export interface PollFormData {
     description: string;
     type: string;
     visibility: string;
+    voting_access_mode: string;
     start_at: string;
     end_at: string;
 }
@@ -56,6 +60,7 @@ export interface PollFormErrors {
     description?: string;
     type?: string;
     visibility?: string;
+    voting_access_mode?: string;
     start_at?: string;
     end_at?: string;
 }
@@ -273,6 +278,134 @@ export function PollFormShared({
                         </SelectContent>
                     </Select>
                 </div>
+            </div>
+
+            {/* Voting Access Mode Section */}
+            <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+                <div className="flex items-center gap-2">
+                    <QrCode className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-medium">Voting Access Mode</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                    Choose how participants are allowed to vote in this poll.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                    {/* Remote Only */}
+                    <label
+                        className={`relative flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all hover:bg-muted/50 ${
+                            formData.voting_access_mode === 'remote_only'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-muted'
+                        }`}
+                    >
+                        <input
+                            type="radio"
+                            name="voting_access_mode"
+                            value="remote_only"
+                            checked={formData.voting_access_mode === 'remote_only'}
+                            onChange={(e) =>
+                                onFormDataChange('voting_access_mode', e.target.value)
+                            }
+                            className="sr-only"
+                        />
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                                <Laptop className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                                <p className="font-medium">Remote Only</p>
+                                <p className="text-xs text-muted-foreground">
+                                    No verification needed
+                                </p>
+                            </div>
+                        </div>
+                        {formData.voting_access_mode === 'remote_only' && (
+                            <div className="absolute right-2 top-2">
+                                <Check className="h-4 w-4 text-primary" />
+                            </div>
+                        )}
+                    </label>
+
+                    {/* On-Premise Only */}
+                    <label
+                        className={`relative flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all hover:bg-muted/50 ${
+                            formData.voting_access_mode === 'on_premise_only'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-muted'
+                        }`}
+                    >
+                        <input
+                            type="radio"
+                            name="voting_access_mode"
+                            value="on_premise_only"
+                            checked={formData.voting_access_mode === 'on_premise_only'}
+                            onChange={(e) =>
+                                onFormDataChange('voting_access_mode', e.target.value)
+                            }
+                            className="sr-only"
+                        />
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+                                <MapPin className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <div>
+                                <p className="font-medium">On-Premise Only</p>
+                                <p className="text-xs text-muted-foreground">
+                                    QR verification required
+                                </p>
+                            </div>
+                        </div>
+                        {formData.voting_access_mode === 'on_premise_only' && (
+                            <div className="absolute right-2 top-2">
+                                <Check className="h-4 w-4 text-primary" />
+                            </div>
+                        )}
+                    </label>
+
+                    {/* Hybrid (Default) */}
+                    <label
+                        className={`relative flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all hover:bg-muted/50 ${
+                            formData.voting_access_mode === 'hybrid'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-muted'
+                        }`}
+                    >
+                        <input
+                            type="radio"
+                            name="voting_access_mode"
+                            value="hybrid"
+                            checked={formData.voting_access_mode === 'hybrid'}
+                            onChange={(e) =>
+                                onFormDataChange('voting_access_mode', e.target.value)
+                            }
+                            className="sr-only"
+                        />
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                                <Globe className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div>
+                                <p className="font-medium">Hybrid</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Remote or on-premise
+                                </p>
+                            </div>
+                        </div>
+                        {formData.voting_access_mode === 'hybrid' && (
+                            <div className="absolute right-2 top-2">
+                                <Check className="h-4 w-4 text-primary" />
+                            </div>
+                        )}
+                        <Badge variant="secondary" className="absolute bottom-2 right-2 text-[10px]">
+                            Default
+                        </Badge>
+                    </label>
+                </div>
+                {errors.voting_access_mode && (
+                    <p className="text-sm text-destructive">
+                        {errors.voting_access_mode}
+                    </p>
+                )}
             </div>
 
             {formData.visibility === 'invite_only' && (

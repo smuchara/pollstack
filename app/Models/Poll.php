@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\VotingAccessMode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,6 +34,7 @@ class Poll extends Model
         'type',
         'poll_type',
         'visibility',
+        'voting_access_mode',
         'status',
         'start_at',
         'end_at',
@@ -40,10 +42,19 @@ class Poll extends Model
         'organization_id',
     ];
 
-    protected $casts = [
-        'start_at' => 'datetime',
-        'end_at' => 'datetime',
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'start_at' => 'datetime',
+            'end_at' => 'datetime',
+            'voting_access_mode' => VotingAccessMode::class,
+        ];
+    }
 
     /**
      * Get the organization that owns the poll.
@@ -106,6 +117,58 @@ class Poll extends Model
     }
 
     /**
+     * Get the QR tokens for this poll.
+     */
+    public function qrTokens(): HasMany
+    {
+        return $this->hasMany(PollQrToken::class);
+    }
+
+    /**
+     * Get the voting access tokens for this poll.
+     */
+    public function votingAccessTokens(): HasMany
+    {
+        return $this->hasMany(VotingAccessToken::class);
+    }
+
+    /**
+     * Check if this poll requires on-premise verification to vote.
+     */
+    public function requiresOnPremiseVerification(): bool
+    {
+        return $this->voting_access_mode === VotingAccessMode::OnPremiseOnly;
+    }
+
+    /**
+     * Check if this poll supports remote voting.
+     */
+    public function supportsRemoteVoting(): bool
+    {
+        return $this->voting_access_mode !== VotingAccessMode::OnPremiseOnly;
+    }
+
+    /**
+     * Check if this poll supports on-premise verification.
+     */
+    public function supportsOnPremiseVerification(): bool
+    {
+        return $this->voting_access_mode !== VotingAccessMode::RemoteOnly;
+    }
+
+    /**
+     * Check if a user has verified on-premise for this poll.
+     */
+    public function hasUserVerifiedOnPremise(User $user): bool
+    {
+        return $this->votingAccessTokens()
+            ->where('user_id', $user->id)
+            ->where('verification_type', 'on_premise')
+            ->valid()
+            ->exists();
+    }
+
+    /**
      * Scope a query to only include polls for a specific organization.
      */
     public function scopeForOrganization($query, $organizationId)
@@ -164,10 +227,10 @@ class Poll extends Model
                             })
                                 // Or invited via department
                                 ->orWhereHas('invitedDepartments', function ($deptQ) use ($user) {
-                                $deptQ->whereHas('users', function ($userQ) use ($user) {
-                                    $userQ->where('users.id', $user->id);
+                                    $deptQ->whereHas('users', function ($userQ) use ($user) {
+                                        $userQ->where('users.id', $user->id);
+                                    });
                                 });
-                            });
                         });
                 });
         });
@@ -178,7 +241,7 @@ class Poll extends Model
      */
     public function hasEnded(): bool
     {
-        if (!$this->end_at) {
+        if (! $this->end_at) {
             return false;
         }
 
@@ -194,7 +257,7 @@ class Poll extends Model
             return false;
         }
 
-        if (!$this->start_at) {
+        if (! $this->start_at) {
             return false;
         }
 
@@ -290,7 +353,7 @@ class Poll extends Model
         }
 
         // Check visibility - invite-only polls require invitation
-        if ($this->isInviteOnly() && !$this->isUserInvited($user)) {
+        if ($this->isInviteOnly() && ! $this->isUserInvited($user)) {
             return false;
         }
 
