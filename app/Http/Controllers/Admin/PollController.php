@@ -115,11 +115,17 @@ class PollController extends Controller
             }
         });
 
-        // Send email notifications after transaction commit
+        // Send email and in-app notifications after transaction commit
         if ($poll && $usersToNotify->isNotEmpty()) {
-            Log::info('Queueing emails', ['count' => $usersToNotify->unique('id')->count()]);
+            Log::info('Queueing emails and notifications', ['count' => $usersToNotify->unique('id')->count()]);
+            $inviterName = $request->user()->name;
+
             foreach ($usersToNotify->unique('id') as $user) {
+                // Send email notification
                 Mail::to($user)->queue(new PollInvitation($poll, $user));
+
+                // Send in-app notification
+                $user->notify(new \App\Notifications\PollInvitationNotification($poll, $inviterName));
             }
         } else {
             Log::info('No users to notify or poll not created', ['users_count' => $usersToNotify->count()]);

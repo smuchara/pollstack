@@ -119,6 +119,21 @@ class SendUserInvitationJob implements ShouldQueue
             if ($processed >= $total) {
                 $newProgress['status'] = 'completed';
                 Cache::put($cacheKey, $newProgress, 120);
+
+                // Dispatch notification to the inviter
+                if ($this->invitedBy) {
+                    $inviter = \App\Models\User::find($this->invitedBy);
+                    if ($inviter) {
+                        // Get organization if available
+                        $organization = $inviter->organization;
+
+                        $inviter->notify(new \App\Notifications\BulkInviteCompletedNotification(
+                            $sent,
+                            $failed,
+                            $organization
+                        ));
+                    }
+                }
             } else {
                 Cache::put($cacheKey, $newProgress, 3600);
             }

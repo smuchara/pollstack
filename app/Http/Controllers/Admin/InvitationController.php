@@ -211,6 +211,23 @@ class InvitationController extends Controller
 
             // Log the user in
             auth()->login($user);
+
+            // Send notifications inside transaction or after commit?
+            // Better to fetch fresh models after creation
+
+            // 1. Notify the new user (Welcome/Account Linked)
+            // Need to get organization and inviter details
+            $organization = \App\Models\Organization::find($invitation->organization_id);
+            $inviter = \App\Models\User::find($invitation->invited_by);
+
+            if ($organization && $inviter) {
+                $user->notify(new \App\Notifications\AccountLinkedNotification($organization, $inviter->name));
+            }
+
+            // 2. Notify the admin who invited them
+            if ($inviter) {
+                $inviter->notify(new \App\Notifications\WelcomeNewUserNotification($user, $organization));
+            }
         });
 
         return redirect()->route('dashboard')

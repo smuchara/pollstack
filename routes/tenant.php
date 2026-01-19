@@ -19,6 +19,11 @@ Route::get('/dashboard', function () {
     return Inertia::render('user-dashboard');
 })->name('tenant.dashboard');
 
+// Polls for regular organization users
+Route::get('/polls', [\App\Http\Controllers\PollController::class, 'index'])->name('tenant.polls.index');
+Route::post('/polls/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('tenant.polls.vote');
+Route::get('/polls/{poll}/results', [\App\Http\Controllers\PollResultsController::class, 'show'])->name('tenant.polls.results');
+
 // Organization Admin Routes
 Route::middleware(['admin'])->prefix('admin')->name('tenant.admin.')->group(function () {
 

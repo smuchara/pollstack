@@ -83,9 +83,13 @@ export function AppSidebar() {
                 icon: ListChecks,
             });
         } else {
+            // Regular users - use organization-scoped route if available
+            const pollsHref = organization_slug
+                ? `/organization/${organization_slug}/polls`
+                : '/polls';
             pollItems.push({
                 title: 'Polls',
-                href: '/polls',
+                href: pollsHref,
                 icon: BarChart3,
             });
         }

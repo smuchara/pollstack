@@ -67,3 +67,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 // Presence Verification - QR Scan Route (public, handles auth redirect)
 Route::get('/presence/scan/{token}', [\App\Http\Controllers\PresenceVerificationController::class, 'scanQrCode'])->name('presence.verify.scan');
+
+// Notification Routes
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+    Route::post('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('read');
+    Route::post('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('readAll');
+    Route::delete('/{id}', [\App\Http\Controllers\NotificationController::class, 'destroy'])->name('destroy');
+});

@@ -29,12 +29,41 @@ export interface FlashMessages {
     warning?: string;
 }
 
+export type NotificationType =
+    | 'poll_invitation'
+    | 'proxy_voter_assigned'
+    | 'poll_starting_soon'
+    | 'poll_ending_soon'
+    | 'poll_results'
+    | 'invitation_failed'
+    | 'system_update'
+    | 'user_registered';
+
+export interface Notification {
+    id: string;
+    type: NotificationType;
+    icon: string;
+    color: string;
+    title: string;
+    message: string;
+    action_url?: string | null;
+    action_text?: string | null;
+    read_at: string | null;
+    created_at: string;
+}
+
+export interface NotificationsData {
+    items: Notification[];
+    unread_count: number;
+}
+
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
     sidebarOpen: boolean;
     flash?: FlashMessages;
+    notifications?: NotificationsData | null;
     [key: string]: unknown;
 }
 
@@ -51,3 +80,4 @@ export interface User {
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
 }
+

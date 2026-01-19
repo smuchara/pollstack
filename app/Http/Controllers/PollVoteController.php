@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Poll;
 use App\Models\Vote;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class PollVoteController extends Controller
 {
@@ -15,7 +15,7 @@ class PollVoteController extends Controller
         Log::info('Vote request received', [
             'user_id' => $request->user()->id,
             'poll_id' => $poll->id,
-            'payload' => $request->all()
+            'payload' => $request->all(),
         ]);
 
         $validated = $request->validate([
@@ -35,7 +35,7 @@ class PollVoteController extends Controller
                 ->where('proxy_user_id', $currentUser->id)
                 ->exists();
 
-            if (!$isProxy) {
+            if (! $isProxy) {
                 throw ValidationException::withMessages([
                     'on_behalf_of' => 'You are not authorized to vote on behalf of this user.',
                 ]);
@@ -60,7 +60,7 @@ class PollVoteController extends Controller
         }
 
         // Check if user is eligible to vote on this poll
-        if (!$poll->canBeVotedOnBy($votingAsUser)) {
+        if (! $poll->canBeVotedOnBy($votingAsUser)) {
             throw ValidationException::withMessages([
                 'poll' => 'The user you are voting for is not eligible to vote in this poll.',
             ]);
@@ -89,6 +89,9 @@ class PollVoteController extends Controller
         ]);
 
         Log::info('Vote created', ['vote_id' => $vote->id, 'user_id' => $votingAsUser->id, 'proxy_user_id' => $proxyUserId]);
+
+        // Send notification to the user who performed the action (could be proxy or self)
+        $currentUser->notify(new \App\Notifications\VoteCastNotification($poll));
 
         return back()->with('success', 'Vote cast successfully.');
     }
