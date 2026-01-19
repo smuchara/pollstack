@@ -29,39 +29,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export type VotingAccessMode = 'remote_only' | 'on_premise_only' | 'hybrid';
 
 export interface PresenceVerificationGateProps {
-    /** The poll ID */
-    // pollId not needed for now?
-    // pollId: number;
     title?: string;
-    /** The voting access mode for the poll */
     votingAccessMode: VotingAccessMode;
-    /** Whether the user has already verified on-premise */
     isVerified: boolean;
-    /** The verification type if already verified */
     verificationType?: 'remote' | 'on_premise' | null;
-    /** Callback when verification status changes */
     onVerificationChange?: (
         verified: boolean,
         type: 'remote' | 'on_premise',
     ) => void;
-    /** Callback when user chooses to proceed (vote button) */
+
     onProceed: (verificationType: 'remote' | 'on_premise') => void;
-    /** Whether voting is disabled */
     disabled?: boolean;
-    /** Loading state */
     isLoading?: boolean;
-    /** Children to render when verification gating is not needed */
     children: React.ReactNode;
 }
 
-/**
- * PresenceVerificationGate - Component that gates voting based on presence verification requirements.
- *
- * Shows different UIs based on the poll's voting access mode:
- * - Remote Only: Passes through directly (no gate)
- * - On-Premise Only: Requires QR verification before showing voting options
- * - Hybrid: Shows choice between remote voting and on-premise verification
- */
 export function PresenceVerificationGate({
     votingAccessMode,
     isVerified,
