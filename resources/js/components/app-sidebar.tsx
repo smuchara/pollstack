@@ -10,16 +10,23 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { type NavGroup, type NavItem, type SharedData } from '@/types';
-import { usePage } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
-import { BarChart3, LayoutGrid, ListChecks, Settings, UserPlus, Users, Vote } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import {
+    BarChart3,
+    LayoutGrid,
+    ListChecks,
+    Settings,
+    UserPlus,
+    Users,
+    Vote,
+} from 'lucide-react';
 import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
-
-
 export function AppSidebar() {
-    const { auth, organization_slug } = usePage<SharedData & { organization_slug?: string }>().props;
+    const { auth, organization_slug } = usePage<
+        SharedData & { organization_slug?: string }
+    >().props;
     const user = auth?.user;
 
     const tenantBaseUrl = organization_slug

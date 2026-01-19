@@ -44,6 +44,10 @@ interface Statistics {
         start: string | null;
         end: string | null;
     };
+    verification_breakdown?: {
+        on_premise: number;
+        remote: number;
+    };
 }
 
 interface VotingTrendItem {
@@ -119,6 +123,20 @@ export default function PollResults({ poll, statistics, votingTrend, percentageB
             router.delete(`/polls/${poll.id}`);
         }
     };
+
+    // Prepare verification data
+    const verificationData = statistics.verification_breakdown ? [
+        {
+            name: 'On-Premise',
+            value: statistics.verification_breakdown.on_premise,
+            percentage: statistics.total_votes > 0 ? Math.round((statistics.verification_breakdown.on_premise / statistics.total_votes) * 100) : 0,
+        },
+        {
+            name: 'Remote',
+            value: statistics.verification_breakdown.remote,
+            percentage: statistics.total_votes > 0 ? Math.round((statistics.verification_breakdown.remote / statistics.total_votes) * 100) : 0,
+        }
+    ] : [];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -239,19 +257,37 @@ export default function PollResults({ poll, statistics, votingTrend, percentageB
                             </CardContent>
                         </Card>
 
-                        {/* Percentage Breakdown */}
-                        <Card className="shadow-sm">
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base font-semibold">Percentage Breakdown</CardTitle>
-                                <CardDescription>Vote share distribution</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <CustomPieChart
-                                    data={percentageBreakdown}
-                                    colors={CHART_COLORS}
-                                />
-                            </CardContent>
-                        </Card>
+                        <div className="grid gap-5">
+                            {/* Percentage Breakdown */}
+                            <Card className="shadow-sm">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-base font-semibold">Percentage Breakdown</CardTitle>
+                                    <CardDescription>Vote share distribution</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <CustomPieChart
+                                        data={percentageBreakdown}
+                                        colors={CHART_COLORS}
+                                    />
+                                </CardContent>
+                            </Card>
+
+                            {/* Voting Source (New) */}
+                            {statistics.verification_breakdown && (
+                                <Card className="shadow-sm">
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base font-semibold">Voting Source</CardTitle>
+                                        <CardDescription>On-premise vs Remote</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <CustomPieChart
+                                            data={verificationData}
+                                            colors={[ANALYTICS_COLORS.green, ANALYTICS_COLORS.blue]}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
                     </div>
 
                     {/* Voting Trend */}

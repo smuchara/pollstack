@@ -59,4 +59,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/polls', [\App\Http\Controllers\PollController::class, 'index'])->name('polls.index');
     Route::post('/polls/{poll}/vote', [\App\Http\Controllers\PollVoteController::class, 'store'])->name('polls.vote');
     Route::get('/polls/{poll}/results', [\App\Http\Controllers\PollResultsController::class, 'show'])->name('polls.results');
+
+    // Presence Verification - User Routes
+    Route::post('/presence/verify', [\App\Http\Controllers\PresenceVerificationController::class, 'verifyPresence'])->name('presence.verify');
+    Route::get('/polls/{poll}/verification-status', [\App\Http\Controllers\PresenceVerificationController::class, 'getVerificationStatus'])->name('polls.verification-status');
 });
+
+// Presence Verification - QR Scan Route (public, handles auth redirect)
+Route::get('/presence/scan/{token}', [\App\Http\Controllers\PresenceVerificationController::class, 'scanQrCode'])->name('presence.verify.scan');

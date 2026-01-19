@@ -1,14 +1,14 @@
+import {
+    calculateDuration,
+    formatLocalDate,
+    formatLocalTimeOnly,
+} from '@/lib/date-utils';
 import { Head, router } from '@inertiajs/react';
+import { Calendar, Clock, Edit, Globe, Lock, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Calendar, Lock, Globe, Clock } from 'lucide-react';
-import { formatLocalDate, formatLocalTimeOnly, calculateDuration } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 // Components
-import AppLayout from '@/layouts/app-layout';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -19,20 +19,37 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import AppLayout from '@/layouts/app-layout';
 
 // Types
 import type { BreadcrumbItem } from '@/types';
-// Define types locally for now or import if created
+
 interface PollOption {
     id: number;
     text: string;
     order: number;
+    image_url?: string | null;
+    image_full_url?: string | null;
+    name?: string | null;
+    position?: string | null;
 }
+
 interface Poll {
     id: number;
     question: string;
     description: string | null;
     type: 'open' | 'closed';
+    poll_type?: 'standard' | 'profile';
     status: 'scheduled' | 'active' | 'ended' | 'archived';
     start_at: string | null;
     end_at: string | null;
@@ -96,10 +113,14 @@ export default function PollsIndex({ polls }: Props) {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'active': return 'bg-green-500/15 text-green-700 dark:bg-green-500/20 dark:text-green-400 border-green-200 dark:border-green-800';
-            case 'scheduled': return 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-800';
-            case 'ended': return 'bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-200 dark:border-gray-800';
-            default: return 'secondary';
+            case 'active':
+                return 'bg-green-500/15 text-green-700 dark:bg-green-500/20 dark:text-green-400 border-green-200 dark:border-green-800';
+            case 'scheduled':
+                return 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+            case 'ended':
+                return 'bg-gray-500/15 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-200 dark:border-gray-800';
+            default:
+                return 'secondary';
         }
     };
 
@@ -116,7 +137,8 @@ export default function PollsIndex({ polls }: Props) {
                                 Polls Management
                             </h1>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Create and manage system-wide and organization-specific polls.
+                                Create and manage system-wide and
+                                organization-specific polls.
                             </p>
                         </div>
 
@@ -131,65 +153,161 @@ export default function PollsIndex({ polls }: Props) {
                         {polls.data.map((poll) => (
                             <Card key={poll.id} className="flex flex-col">
                                 <CardHeader className="pb-3">
-                                    <div className="flex justify-between items-start gap-2">
+                                    <div className="flex items-start justify-between gap-2">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className={`capitalize border ${getStatusColor(poll.status)}`}>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`border capitalize ${getStatusColor(poll.status)}`}
+                                                >
                                                     {poll.status}
                                                 </Badge>
                                                 {poll.type === 'closed' ? (
-                                                    <Lock className="h-3 w-3 text-muted-foreground" aria-label="Closed Ballot" />
+                                                    <Lock
+                                                        className="h-3 w-3 text-muted-foreground"
+                                                        aria-label="Closed Ballot"
+                                                    />
                                                 ) : (
-                                                    <Globe className="h-3 w-3 text-muted-foreground" aria-label="Open Ballot" />
+                                                    <Globe
+                                                        className="h-3 w-3 text-muted-foreground"
+                                                        aria-label="Open Ballot"
+                                                    />
                                                 )}
                                             </div>
-                                            <CardTitle className="text-lg leading-tight line-clamp-2" title={poll.question}>
+                                            <CardTitle
+                                                className="line-clamp-2 text-lg leading-tight"
+                                                title={poll.question}
+                                            >
                                                 {poll.question}
                                             </CardTitle>
                                         </div>
                                     </div>
-                                    <CardDescription className="line-clamp-2 mt-2 h-10">
-                                        {poll.description || "No description provided."}
+                                    <CardDescription className="mt-2 line-clamp-2 h-10">
+                                        {poll.description ||
+                                            'No description provided.'}
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex-1 pb-3">
                                     <div className="space-y-4">
-                                        {/* Options Preview */}
-                                        <div className="space-y-2">
-                                            {poll.options.slice(0, 3).map(option => (
-                                                <div key={option.id} className="text-sm border rounded px-3 py-2 bg-muted/30 truncate">
-                                                    {option.text}
-                                                </div>
-                                            ))}
-                                            {poll.options.length > 3 && (
-                                                <div className="text-xs text-muted-foreground text-center">
-                                                    +{poll.options.length - 3} more options
-                                                </div>
-                                            )}
-                                        </div>
+                                        {poll.poll_type === 'profile' ? (
+                                            <div className="space-y-2">
+                                                {poll.options
+                                                    .slice(0, 3)
+                                                    .map((option) => (
+                                                        <div
+                                                            key={option.id}
+                                                            className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2"
+                                                        >
+                                                            {option.image_full_url ? (
+                                                                <img
+                                                                    src={
+                                                                        option.image_full_url
+                                                                    }
+                                                                    alt={
+                                                                        option.name ||
+                                                                        option.text
+                                                                    }
+                                                                    className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-border"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                                                                    {(
+                                                                        option.name ||
+                                                                        option.text
+                                                                    )
+                                                                        .charAt(
+                                                                            0,
+                                                                        )
+                                                                        .toUpperCase()}
+                                                                </div>
+                                                            )}
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="truncate text-sm font-medium">
+                                                                    {option.name ||
+                                                                        option.text}
+                                                                </p>
+                                                                {option.position && (
+                                                                    <p className="truncate text-xs text-muted-foreground">
+                                                                        {
+                                                                            option.position
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                {poll.options.length > 3 && (
+                                                    <div className="text-center text-xs text-muted-foreground">
+                                                        +
+                                                        {poll.options.length -
+                                                            3}{' '}
+                                                        more candidate
+                                                        {poll.options.length -
+                                                            3 !==
+                                                        1
+                                                            ? 's'
+                                                            : ''}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {poll.options
+                                                    .slice(0, 3)
+                                                    .map((option) => (
+                                                        <div
+                                                            key={option.id}
+                                                            className="truncate rounded border bg-muted/30 px-3 py-2 text-sm"
+                                                        >
+                                                            {option.text}
+                                                        </div>
+                                                    ))}
+                                                {poll.options.length > 3 && (
+                                                    <div className="text-center text-xs text-muted-foreground">
+                                                        +
+                                                        {poll.options.length -
+                                                            3}{' '}
+                                                        more options
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Poll Timing Information */}
                                         <div className="space-y-2 border-t pt-3">
                                             {/* Duration Badge */}
                                             {poll.start_at && poll.end_at && (
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-medium text-muted-foreground">Duration:</span>
-                                                    <div className="flex items-center gap-1 text-xs font-semibold text-foreground bg-primary/10 px-2 py-1 rounded">
+                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                        Duration:
+                                                    </span>
+                                                    <div className="flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs font-semibold text-foreground">
                                                         <Clock className="h-3 w-3" />
-                                                        {calculateDuration(poll.start_at, poll.end_at)}
+                                                        {calculateDuration(
+                                                            poll.start_at,
+                                                            poll.end_at,
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
 
                                             {/* Start Time */}
                                             <div className="flex items-center justify-between text-xs">
-                                                <span className="text-muted-foreground">Starts:</span>
+                                                <span className="text-muted-foreground">
+                                                    Starts:
+                                                </span>
                                                 <span className="font-medium">
                                                     {poll.start_at ? (
                                                         <>
-                                                            {formatLocalDate(poll.start_at)}{' '}
-                                                            <span className="text-muted-foreground">at</span>{' '}
-                                                            {formatLocalTimeOnly(poll.start_at)}
+                                                            {formatLocalDate(
+                                                                poll.start_at,
+                                                            )}{' '}
+                                                            <span className="text-muted-foreground">
+                                                                at
+                                                            </span>{' '}
+                                                            {formatLocalTimeOnly(
+                                                                poll.start_at,
+                                                            )}
                                                         </>
                                                     ) : (
                                                         'Not set'
@@ -199,13 +317,21 @@ export default function PollsIndex({ polls }: Props) {
 
                                             {/* End Time */}
                                             <div className="flex items-center justify-between text-xs">
-                                                <span className="text-muted-foreground">Ends:</span>
+                                                <span className="text-muted-foreground">
+                                                    Ends:
+                                                </span>
                                                 <span className="font-medium">
                                                     {poll.end_at ? (
                                                         <>
-                                                            {formatLocalDate(poll.end_at)}{' '}
-                                                            <span className="text-muted-foreground">at</span>{' '}
-                                                            {formatLocalTimeOnly(poll.end_at)}
+                                                            {formatLocalDate(
+                                                                poll.end_at,
+                                                            )}{' '}
+                                                            <span className="text-muted-foreground">
+                                                                at
+                                                            </span>{' '}
+                                                            {formatLocalTimeOnly(
+                                                                poll.end_at,
+                                                            )}
                                                         </>
                                                     ) : (
                                                         'Not set'
@@ -214,22 +340,37 @@ export default function PollsIndex({ polls }: Props) {
                                             </div>
 
                                             {/* Organization */}
-                                            <div className="flex items-center justify-between text-xs pt-2 border-t">
-                                                <span className="text-muted-foreground">Organization:</span>
+                                            <div className="flex items-center justify-between border-t pt-2 text-xs">
+                                                <span className="text-muted-foreground">
+                                                    Organization:
+                                                </span>
                                                 {poll.organization ? (
-                                                    <Badge variant="secondary" className="text-[10px] h-5">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="h-5 text-[10px]"
+                                                    >
                                                         {poll.organization.name}
                                                     </Badge>
                                                 ) : (
-                                                    <Badge variant="secondary" className="text-[10px] h-5">System</Badge>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="h-5 text-[10px]"
+                                                    >
+                                                        System
+                                                    </Badge>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                 </CardContent>
-                                <CardFooter className="pt-3 border-t bg-muted/10 flex justify-between gap-2">
+                                <CardFooter className="flex justify-between gap-2 border-t bg-muted/10 pt-3">
                                     {poll.status === 'scheduled' && (
-                                        <Button variant="ghost" size="sm" className="flex-1 gap-2" onClick={() => handleEdit(poll)}>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="flex-1 gap-2"
+                                            onClick={() => handleEdit(poll)}
+                                        >
                                             <Edit className="h-3.5 w-3.5" />
                                             Edit
                                         </Button>
@@ -249,13 +390,18 @@ export default function PollsIndex({ polls }: Props) {
                     </div>
 
                     {polls.data.length === 0 && (
-                        <div className="text-center py-12 rounded-lg border border-dashed bg-muted/20">
-                            <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                            <h3 className="text-lg font-medium">No polls found</h3>
-                            <p className="text-muted-foreground text-sm mt-1">
+                        <div className="rounded-lg border border-dashed bg-muted/20 py-12 text-center">
+                            <Calendar className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                            <h3 className="text-lg font-medium">
+                                No polls found
+                            </h3>
+                            <p className="mt-1 text-sm text-muted-foreground">
                                 Create your first poll to get started.
                             </p>
-                            <Button onClick={handleCreate} className="mt-4 gap-2">
+                            <Button
+                                onClick={handleCreate}
+                                className="mt-4 gap-2"
+                            >
                                 <Plus className="h-4 w-4" />
                                 Create Poll
                             </Button>
@@ -265,18 +411,27 @@ export default function PollsIndex({ polls }: Props) {
             </div>
 
             {/* Delete Confirmation */}
-            <AlertDialog open={!!pollToDelete} onOpenChange={() => setPollToDelete(null)}>
+            <AlertDialog
+                open={!!pollToDelete}
+                onOpenChange={() => setPollToDelete(null)}
+            >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>
+                            Are you absolutely sure?
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the poll
-                            "{pollToDelete?.question}" and remove all collected votes.
+                            This action cannot be undone. This will permanently
+                            delete the poll "{pollToDelete?.question}" and
+                            remove all collected votes.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
                             Delete Poll
                         </AlertDialogAction>
                     </AlertDialogFooter>

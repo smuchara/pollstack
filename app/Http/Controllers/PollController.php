@@ -3,17 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Poll;
+use App\Services\PresenceVerificationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class PollController extends Controller
 {
-    /**
-     * Display a listing of active and ended polls for the authenticated user.
-     * Returns separate datasets for active and ended polls with counts.
-     * System polls are ONLY visible to users without an organization (for internal testing).
-     * Organization users only see polls created within their organization.
-     */
+    public function __construct(
+        private PresenceVerificationService $presenceService
+    ) {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -27,16 +27,20 @@ class PollController extends Controller
                     },
                     'organization',
                     'creator',
+                    'invitedUsers',
+                    'invitedDepartments',
                 ])
-                ->when($user->isSuperAdmin() && ! $user->organization_id, function ($query) {
+                ->when($user->isSuperAdmin() && !$user->organization_id, function ($query) {
                     // Super admins without organization see only system-wide polls
                     $query->whereNull('organization_id');
                 })
                 ->when($user->organization_id, function ($query) use ($user) {
                     // Organization users (including org admins) see only their organization's polls
-                    $query->where('organization_id', $user->organization_id);
+                    // that are visible to them (public or they're invited)
+                    $query->where('organization_id', $user->organization_id)
+                        ->visibleTo($user);
                 })
-                ->when(! $user->isSuperAdmin() && ! $user->organization_id, function ($query) {
+                ->when(!$user->isSuperAdmin() && !$user->organization_id, function ($query) {
                     // Users without organization see only system-wide polls
                     $query->whereNull('organization_id');
                 })
@@ -46,6 +50,11 @@ class PollController extends Controller
         // Get active polls
         $activePolls = $baseQuery()
             ->where('status', 'active')
+            ->get();
+
+        // Get scheduled polls
+        $scheduledPolls = $baseQuery()
+            ->where('status', 'scheduled')
             ->get();
 
         // Get ended polls
@@ -75,21 +84,57 @@ class PollController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
+            // Add proxy assignments
+            $poll->proxy_assignments = $poll->proxies()
+                ->where('proxy_user_id', $user->id)
+                ->with('originalUser')
+                ->get()
+                ->map(function ($proxy) use ($poll) {
+                    $principal = $proxy->originalUser;
+                    $hasVoted = $poll->votes()->where('user_id', $principal->id)->exists();
+
+                    return [
+                        'user_id' => $principal->id,
+                        'name' => $principal->name,
+                        'has_voted' => $hasVoted,
+                    ];
+                });
+
             // Add total votes count
             $poll->total_votes = $poll->votes()->count();
+
+            // Add voting access mode (string value for frontend)
+            $poll->voting_access_mode = $poll->voting_access_mode?->value ?? 'hybrid';
+
+            // Add verification status for the user
+            $verificationStatus = $this->presenceService->getUserVerificationStatus($poll, $user);
+            $poll->verification_status = [
+                'is_verified' => $verificationStatus['is_verified'],
+                'verification_type' => $verificationStatus['verification_type']?->value,
+                'can_vote_remotely' => $verificationStatus['can_vote_remotely'],
+                'requires_verification' => $verificationStatus['requires_verification'],
+            ];
 
             return $poll;
         };
 
-        // Transform both collections
+        // Transform all collections
         $activePolls = $activePolls->map($transformPoll);
+        $scheduledPolls = $scheduledPolls->map($transformPoll);
         $endedPolls = $endedPolls->map($transformPoll);
+
+        // Filter out any scheduled polls that just became active from the scheduled list to avoid confusion?
+        // Actually, if they became active, they should really be in the active list, but moving them now is complex.
+        // For now, let's just pass them as is. If they show as "Active" in the Scheduled tab, the user will likely refresh or we can handle it in UI.
+        // Better yet, let's just rely on the status.
 
         return Inertia::render('polls/index', [
             'activePolls' => $activePolls,
+            'scheduledPolls' => $scheduledPolls,
             'endedPolls' => $endedPolls,
             'counts' => [
                 'active' => $activePolls->count(),
+                'scheduled' => $scheduledPolls->count(),
                 'ended' => $endedPolls->count(),
             ],
         ]);

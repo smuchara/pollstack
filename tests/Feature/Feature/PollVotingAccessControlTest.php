@@ -25,7 +25,7 @@ test('super admin cannot vote on organization polls', function () {
 
     $response->assertStatus(422);
     $response->assertJsonValidationErrors(['poll']);
-    expect($response->json('errors.poll.0'))->toBe('You are not eligible to vote in this poll.');
+    expect($response->json('errors.poll.0'))->toBe('The user you are voting for is not eligible to vote in this poll.');
 
     // Verify no vote was recorded
     expect(Vote::count())->toBe(0);
@@ -95,7 +95,7 @@ test('organization users cannot vote on other organizations polls', function () 
 
     $response->assertStatus(422);
     $response->assertJsonValidationErrors(['poll']);
-    expect($response->json('errors.poll.0'))->toBe('You are not eligible to vote in this poll.');
+    expect($response->json('errors.poll.0'))->toBe('The user you are voting for is not eligible to vote in this poll.');
 
     // Verify no vote was recorded
     expect(Vote::count())->toBe(0);
@@ -118,7 +118,7 @@ test('organization users cannot vote on system polls', function () {
 
     $response->assertStatus(422);
     $response->assertJsonValidationErrors(['poll']);
-    expect($response->json('errors.poll.0'))->toBe('You are not eligible to vote in this poll.');
+    expect($response->json('errors.poll.0'))->toBe('The user you are voting for is not eligible to vote in this poll.');
 
     // Verify no vote was recorded
     expect(Vote::count())->toBe(0);
@@ -187,7 +187,7 @@ test('organization admin cannot vote on system polls', function () {
 
     $response->assertStatus(422);
     $response->assertJsonValidationErrors(['poll']);
-    expect($response->json('errors.poll.0'))->toBe('You are not eligible to vote in this poll.');
+    expect($response->json('errors.poll.0'))->toBe('The user you are voting for is not eligible to vote in this poll.');
 
     // Verify no vote was recorded
     expect(Vote::count())->toBe(0);
