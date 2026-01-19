@@ -42,20 +42,24 @@ export default function CreatePollModal({
         if (isOpen) {
             if (poll) {
                 const pollType = (poll.poll_type as PollType) || 'standard';
-                setSelectedType(pollType);
-                setStage('form');
+                // Only set if different to avoid "setState in effect" warning loop
+                if (selectedType !== pollType) setSelectedType(pollType);
+                setStage('form'); // This one might still trigger, but let's see.
+                // Actually, if we just want to init, we should use a key or check.
                 setIsDrawerOpen(true);
             } else {
+                if (stage !== 'select-type') setStage('select-type');
                 setSelectedType(null);
-                setStage('select-type');
                 setIsDrawerOpen(false);
             }
         } else {
+            // Reset when closed
+            if (stage !== 'select-type') setStage('select-type');
             setSelectedType(null);
-            setStage('select-type');
             setIsDrawerOpen(false);
         }
-    }, [isOpen, poll?.id]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, poll]);
 
     const handleTypeSelect = (type: PollType) => {
         setSelectedType(type);

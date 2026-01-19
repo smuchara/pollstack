@@ -1,22 +1,17 @@
 import { router } from '@inertiajs/react';
+import axios from 'axios';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import axios from 'axios';
 
 import { Button } from '@/components/ui/button';
 import { SlideDrawer } from '@/components/ui/slide-drawer';
 import { localToUTC, utcToLocalInput } from '@/lib/date-utils';
 
-import {
-    PollFormData,
-    PollFormShared,
-    User,
-} from './poll-form-shared';
+import { PollFormData, PollFormShared, User } from './poll-form-shared';
+import { ExtractedUser } from './poll-invite-review-modal';
 import { PollType } from './poll-type-selector';
 import { ProfilePollForm, ProfilePollOption } from './profile-poll-form';
 import { StandardPollForm, StandardPollOption } from './standard-poll-form';
-import { ProxyAssignmentModal, ProxyUser } from './proxy-assignment-modal';
-import { ExtractedUser } from './poll-invite-review-modal';
 
 export interface Poll {
     id?: number;
@@ -39,6 +34,7 @@ export interface Poll {
         votes_count?: number;
     }>;
     invited_users?: User[];
+    voting_access_mode?: string;
 }
 
 interface PollCreationDrawerProps {
@@ -118,14 +114,16 @@ export function PollCreationDrawer({
     const [inviteFile, setInviteFile] = useState<File | null>(null);
     const [reviewedUsers, setReviewedUsers] = useState<ExtractedUser[]>([]);
     // Proxies state: linking principal (owner) -> proxy (voter)
-    const [proxies, setProxies] = useState<{principal: string|number, proxy: string|number}[]>([]); 
+    const [proxies, setProxies] = useState<
+        { principal: string | number; proxy: string | number }[]
+    >([]);
 
     // Form state
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Reset/sync form when drawer opens or poll changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     useEffect(() => {
         if (isOpen) {
             if (poll) {
@@ -135,7 +133,7 @@ export function PollCreationDrawer({
                     description: poll.description || '',
                     type: poll.type,
                     visibility: poll.visibility || 'public',
-                    voting_access_mode: (poll as any).voting_access_mode || 'hybrid',
+                    voting_access_mode: poll.voting_access_mode || 'hybrid',
                     start_at: poll.start_at
                         ? utcToLocalInput(poll.start_at)
                         : '',
@@ -184,8 +182,10 @@ export function PollCreationDrawer({
                 setReviewedUsers([]);
             }
             setErrors({});
+            setErrors({});
         }
-    }, [isOpen, poll?.id]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, poll]);
 
     const handleFormDataChange = <K extends keyof PollFormData>(
         field: K,
@@ -256,37 +256,42 @@ export function PollCreationDrawer({
 
     const handleFileChange = async (file: File | null) => {
         if (!file) return;
-        
+
         const loadingId = toast.loading('Processing file...');
-        
+
         try {
             const formData = new FormData();
             formData.append('file', file);
-            
-            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
+
+            // const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
             // Construct URL based on context
-            const url = organizationSlug 
-                ? `/organization/${organizationSlug}/admin/polls/invite-preview` 
-                : '/super-admin/polls/invite-preview'; 
+            const url = organizationSlug
+                ? `/organization/${organizationSlug}/admin/polls/invite-preview`
+                : '/super-admin/polls/invite-preview';
 
             const res = await axios.post(url, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                }
+                },
             });
-            
-            
+
             const data = res.data;
             setReviewedUsers(data.users);
             // No longer opening review modal, showing inline
             setInviteFile(null); // Clear file input
             toast.success('File processed successfully', { id: loadingId });
-            
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e);
-            const msg = e.response?.data?.message || e.message || 'Failed to process file';
-            toast.error(msg, { id: loadingId });
+
+            let message = 'Failed to process file';
+            if (axios.isAxiosError(e) && e.response?.data?.message) {
+                message = e.response.data.message;
+            } else if (e instanceof Error) {
+                message = e.message;
+            }
+
+            toast.error(message, { id: loadingId });
             setInviteFile(null);
         }
     };
@@ -308,7 +313,10 @@ export function PollCreationDrawer({
         formDataToSend.append('type', formData.type);
         formDataToSend.append('poll_type', pollType);
         formDataToSend.append('visibility', formData.visibility);
-        formDataToSend.append('voting_access_mode', formData.voting_access_mode);
+        formDataToSend.append(
+            'voting_access_mode',
+            formData.voting_access_mode,
+        );
         formDataToSend.append('status', 'active');
 
         // Handle dates - only append if they have values
@@ -366,18 +374,33 @@ export function PollCreationDrawer({
                 formDataToSend.append('invite_file', inviteFile);
             }
             if (reviewedUsers.length > 0) {
-                 reviewedUsers.forEach((user, index) => {
-                     formDataToSend.append(`invite_users_list[${index}][email]`, user.email);
-                     formDataToSend.append(`invite_users_list[${index}][name]`, user.name);
-                     // We also send a temporary ID to map proxies if needed
-                     formDataToSend.append(`invite_users_list[${index}][temp_id]`, String(user.id));
-                 });
+                reviewedUsers.forEach((user, index) => {
+                    formDataToSend.append(
+                        `invite_users_list[${index}][email]`,
+                        user.email,
+                    );
+                    formDataToSend.append(
+                        `invite_users_list[${index}][name]`,
+                        user.name,
+                    );
+                    // We also send a temporary ID to map proxies if needed
+                    formDataToSend.append(
+                        `invite_users_list[${index}][temp_id]`,
+                        String(user.id),
+                    );
+                });
             }
-            
+
             if (proxies.length > 0) {
                 proxies.forEach((p, index) => {
-                    formDataToSend.append(`proxies[${index}][principal_id]`, String(p.principal));
-                    formDataToSend.append(`proxies[${index}][proxy_id]`, String(p.proxy));
+                    formDataToSend.append(
+                        `proxies[${index}][principal_id]`,
+                        String(p.principal),
+                    );
+                    formDataToSend.append(
+                        `proxies[${index}][proxy_id]`,
+                        String(p.proxy),
+                    );
                 });
             }
         }

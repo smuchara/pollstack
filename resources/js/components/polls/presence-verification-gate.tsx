@@ -1,19 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
-import { Laptop, MapPin, QrCode, Check, AlertCircle, Loader2, Camera, Keyboard } from 'lucide-react';
 import axios from 'axios';
-import toast from 'react-hot-toast';
 import { Html5Qrcode } from 'html5-qrcode';
+import {
+    AlertCircle,
+    Camera,
+    Check,
+    Keyboard,
+    Laptop,
+    Loader2,
+    MapPin,
+    QrCode,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,7 +30,9 @@ export type VotingAccessMode = 'remote_only' | 'on_premise_only' | 'hybrid';
 
 export interface PresenceVerificationGateProps {
     /** The poll ID */
-    pollId: number;
+    // pollId not needed for now?
+    // pollId: number;
+    title?: string;
     /** The voting access mode for the poll */
     votingAccessMode: VotingAccessMode;
     /** Whether the user has already verified on-premise */
@@ -30,7 +40,10 @@ export interface PresenceVerificationGateProps {
     /** The verification type if already verified */
     verificationType?: 'remote' | 'on_premise' | null;
     /** Callback when verification status changes */
-    onVerificationChange?: (verified: boolean, type: 'remote' | 'on_premise') => void;
+    onVerificationChange?: (
+        verified: boolean,
+        type: 'remote' | 'on_premise',
+    ) => void;
     /** Callback when user chooses to proceed (vote button) */
     onProceed: (verificationType: 'remote' | 'on_premise') => void;
     /** Whether voting is disabled */
@@ -43,26 +56,25 @@ export interface PresenceVerificationGateProps {
 
 /**
  * PresenceVerificationGate - Component that gates voting based on presence verification requirements.
- * 
+ *
  * Shows different UIs based on the poll's voting access mode:
  * - Remote Only: Passes through directly (no gate)
  * - On-Premise Only: Requires QR verification before showing voting options
  * - Hybrid: Shows choice between remote voting and on-premise verification
  */
 export function PresenceVerificationGate({
-    pollId,
     votingAccessMode,
     isVerified,
     verificationType,
     onVerificationChange,
-    onProceed,
     disabled = false,
-    isLoading = false,
     children,
 }: PresenceVerificationGateProps) {
     const [showQrModal, setShowQrModal] = useState(false);
     const [hasChosen, setHasChosen] = useState(false);
-    const [chosenMode, setChosenMode] = useState<'remote' | 'on_premise' | null>(null);
+    const [chosenMode, setChosenMode] = useState<
+        'remote' | 'on_premise' | null
+    >(null);
 
     // Remote only - no gate needed
     if (votingAccessMode === 'remote_only') {
@@ -81,11 +93,12 @@ export function PresenceVerificationGate({
                     <QrVerificationModal
                         isOpen={showQrModal}
                         onClose={() => setShowQrModal(false)}
-                        pollId={pollId}
                         onVerified={() => {
                             setShowQrModal(false);
                             onVerificationChange?.(true, 'on_premise');
-                            toast.success('Presence verified! You can now vote.');
+                            toast.success(
+                                'Presence verified! You can now vote.',
+                            );
                         }}
                     />
                 </>
@@ -148,7 +161,6 @@ export function PresenceVerificationGate({
                 <QrVerificationModal
                     isOpen={showQrModal}
                     onClose={() => setShowQrModal(false)}
-                    pollId={pollId}
                     onVerified={() => {
                         setShowQrModal(false);
                         setHasChosen(true);
@@ -182,7 +194,10 @@ function VerifiedBadge({ type }: { type: 'remote' | 'on_premise' }) {
                         Your physical presence has been verified
                     </p>
                 </div>
-                <Badge variant="outline" className="ml-auto border-green-300 bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
+                <Badge
+                    variant="outline"
+                    className="ml-auto border-green-300 bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                >
                     <Check className="mr-1 h-3 w-3" />
                     Verified
                 </Badge>
@@ -231,7 +246,11 @@ function OnPremiseRequiredPrompt({
                 </Button>
 
                 {showBackButton && onBack && (
-                    <Button variant="outline" onClick={onBack} className="w-full sm:w-auto">
+                    <Button
+                        variant="outline"
+                        onClick={onBack}
+                        className="w-full sm:w-auto"
+                    >
                         Go Back
                     </Button>
                 )}
@@ -255,7 +274,9 @@ function HybridModeChoice({
     return (
         <div className="space-y-4 rounded-lg border bg-muted/20 p-6">
             <div className="text-center">
-                <h3 className="text-lg font-semibold">How would you like to vote?</h3>
+                <h3 className="text-lg font-semibold">
+                    How would you like to vote?
+                </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                     This poll supports both remote and on-premise voting.
                 </p>
@@ -287,7 +308,7 @@ function HybridModeChoice({
                     disabled={disabled}
                     className="group relative flex flex-col items-center rounded-xl border-2 border-green-200 bg-green-50/50 p-6 transition-all hover:border-green-400 hover:bg-green-100/50 dark:border-green-900 dark:bg-green-950/20 dark:hover:border-green-700 dark:hover:bg-green-950/40"
                 >
-                    <div className="absolute -right-1 -top-1">
+                    <div className="absolute -top-1 -right-1">
                         <Badge className="bg-green-600 text-[10px]">
                             Recommended
                         </Badge>
@@ -310,42 +331,52 @@ function HybridModeChoice({
 /**
  * QrCameraScanner component for rendering the HTML5 QR scanner
  */
-function QrCameraScanner({ onScan, onError }: { onScan: (decodedText: string) => void, onError?: (error: string) => void }) {
+function QrCameraScanner({
+    onScan,
+    onError,
+}: {
+    onScan: (decodedText: string) => void;
+    onError?: (error: string) => void;
+}) {
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
     useEffect(() => {
         // Initialize scanner
-        const scannerId = "reader";
-        
+        const scannerId = 'reader';
+
         // Brief timeout to ensure DOM is ready
         const timer = setTimeout(() => {
             if (!scannerRef.current) {
                 const html5QrCode = new Html5Qrcode(scannerId);
                 scannerRef.current = html5QrCode;
 
-                const config = { 
-                    fps: 10, 
+                const config = {
+                    fps: 10,
                     qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0 
+                    aspectRatio: 1.0,
                 };
 
-                html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    config, 
-                    (decodedText: string) => {
-                        onScan(decodedText);
-                    },
-                    (errorMessage: string) => {
+                html5QrCode
+                    .start(
+                        { facingMode: 'environment' },
+                        config,
+                        (decodedText: string) => {
+                            onScan(decodedText);
+                        },
                         // Ignore frame parse errors
-                    }
-                ).then(() => {
-                    setHasPermission(true);
-                }).catch((err: any) => {
-                    console.error("Error starting scanner:", err);
-                    setHasPermission(false);
-                    onError?.("Could not access camera. Please seek permission.");
-                });
+                        () => {},
+                    )
+                    .then(() => {
+                        setHasPermission(true);
+                    })
+                    .catch((err: unknown) => {
+                        console.error('Error starting scanner:', err);
+                        setHasPermission(false);
+                        onError?.(
+                            'Could not access camera. Please seek permission.',
+                        );
+                    });
             }
         }, 100);
 
@@ -353,9 +384,20 @@ function QrCameraScanner({ onScan, onError }: { onScan: (decodedText: string) =>
             clearTimeout(timer);
             if (scannerRef.current) {
                 if (scannerRef.current.isScanning) {
-                    scannerRef.current.stop().then(() => {
-                        scannerRef.current?.clear();
-                    }).catch((err: any) => console.error("Failed to stop scanner", err));
+                    scannerRef.current
+                        .stop()
+                        .then(() => {
+                            scannerRef.current?.clear();
+                        })
+                        .catch((e: unknown) => {
+                            let message = 'Failed to stop scanner';
+                            if (e instanceof Error) message = e.message;
+                            // @ts-expect-error - axios types might not be available here easily
+                            if (e?.response?.data?.message)
+                                message = e.response.data.message;
+
+                            console.error('Failed to stop scanner', message);
+                        });
                 }
             }
         };
@@ -371,15 +413,15 @@ function QrCameraScanner({ onScan, onError }: { onScan: (decodedText: string) =>
                 )}
                 {/* The library renders the video element here */}
                 <div id="reader" className="w-full"></div>
-                
+
                 {/* Overlay for visual scanning frame */}
                 {hasPermission && (
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                         <div className="h-64 w-64 rounded-xl border-2 border-white/50 bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
-                             <div className="absolute top-0 left-0 h-8 w-8 border-l-4 border-t-4 border-orange-500 rounded-tl-xl -translate-x-1 -translate-y-1"></div>
-                             <div className="absolute top-0 right-0 h-8 w-8 border-r-4 border-t-4 border-orange-500 rounded-tr-xl translate-x-1 -translate-y-1"></div>
-                             <div className="absolute bottom-0 left-0 h-8 w-8 border-l-4 border-b-4 border-orange-500 rounded-bl-xl -translate-x-1 translate-y-1"></div>
-                             <div className="absolute bottom-0 right-0 h-8 w-8 border-r-4 border-b-4 border-orange-500 rounded-br-xl translate-x-1 translate-y-1"></div>
+                            <div className="absolute top-0 left-0 h-8 w-8 -translate-x-1 -translate-y-1 rounded-tl-xl border-t-4 border-l-4 border-orange-500"></div>
+                            <div className="absolute top-0 right-0 h-8 w-8 translate-x-1 -translate-y-1 rounded-tr-xl border-t-4 border-r-4 border-orange-500"></div>
+                            <div className="absolute bottom-0 left-0 h-8 w-8 -translate-x-1 translate-y-1 rounded-bl-xl border-b-4 border-l-4 border-orange-500"></div>
+                            <div className="absolute right-0 bottom-0 h-8 w-8 translate-x-1 translate-y-1 rounded-br-xl border-r-4 border-b-4 border-orange-500"></div>
                         </div>
                     </div>
                 )}
@@ -397,74 +439,13 @@ function QrCameraScanner({ onScan, onError }: { onScan: (decodedText: string) =>
 function QrVerificationModal({
     isOpen,
     onClose,
-    pollId,
     onVerified,
 }: {
     isOpen: boolean;
     onClose: () => void;
-    pollId: number;
     onVerified: () => void;
 }) {
-    const [token, setToken] = useState('');
-    const [isVerifying, setIsVerifying] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState("scan");
-
-    // Reset state when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setToken('');
-            setError(null);
-            setIsVerifying(false);
-            setActiveTab("scan");
-        }
-    }, [isOpen]);
-
-    const performVerification = async (qrToken: string) => {
-        // Extract token if it's a full URL
-        let tokenToVerify = qrToken;
-        if (qrToken.includes('/presence/scan/')) {
-            const parts = qrToken.split('/presence/scan/');
-            if (parts.length > 1) {
-                tokenToVerify = parts[1];
-            }
-        }
-        
-        // Basic length check if it's raw token
-        if (tokenToVerify.length !== 64) {
-             setError('Invalid QR code format. Please try again.');
-             return;
-        }
-
-        setIsVerifying(true);
-        setError(null);
-
-        try {
-            const response = await axios.post('/presence/verify', { token: tokenToVerify });
-            
-            if (response.data.success) {
-                onVerified();
-            } else {
-                setError(response.data.message || 'Verification failed');
-                setIsVerifying(false);
-            }
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to verify presence');
-            setIsVerifying(false);
-        }
-    };
-
-    const handleManualVerify = () => {
-        performVerification(token);
-    };
-
-    const handleScan = (decodedText: string) => {
-        performVerification(decodedText);
-    };
-
     const handleClose = () => {
-        setToken('');
-        setError(null);
         onClose();
     };
 
@@ -480,79 +461,139 @@ function QrVerificationModal({
                         Scan the QR code at the venue to verify your location.
                     </DialogDescription>
                 </DialogHeader>
-
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="scan" className="gap-2">
-                            <Camera className="h-4 w-4" />
-                            Scan Camera
-                        </TabsTrigger>
-                        <TabsTrigger value="manual" className="gap-2">
-                            <Keyboard className="h-4 w-4" />
-                            Manual Entry
-                        </TabsTrigger>
-                    </TabsList>
-                    
-                    <div className="py-4">
-                        {error && (
-                            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                {error}
-                            </div>
-                        )}
-
-                        <TabsContent value="scan" className="mt-0">
-                            {isVerifying ? (
-                                <div className="flex h-[250px] flex-col items-center justify-center space-y-4 rounded-lg border border-dashed bg-muted/30">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                    <p className="text-sm font-medium text-muted-foreground">Verifying scan...</p>
-                                </div>
-                            ) : (
-                                <QrCameraScanner onScan={handleScan} />
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="manual" className="mt-0 space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="qr-token">Verification Code</Label>
-                                <Input
-                                    id="qr-token"
-                                    placeholder="Enter the 64-character code..."
-                                    value={token}
-                                    onChange={(e) => {
-                                        setToken(e.target.value);
-                                        setError(null);
-                                    }}
-                                    className="font-mono text-sm"
-                                    disabled={isVerifying}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    {token.length}/64 characters
-                                </p>
-                            </div>
-                            
-                            <Button
-                                onClick={handleManualVerify}
-                                disabled={token.length !== 64 || isVerifying}
-                                className="w-full gap-2"
-                            >
-                                {isVerifying ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Verifying...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check className="h-4 w-4" />
-                                        Verify Code
-                                    </>
-                                )}
-                            </Button>
-                        </TabsContent>
-                    </div>
-                </Tabs>
+                <QrVerificationContent onVerified={onVerified} />
             </DialogContent>
         </Dialog>
+    );
+}
+
+function QrVerificationContent({ onVerified }: { onVerified: () => void }) {
+    const [token, setToken] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState('scan');
+
+    const performVerification = async (qrToken: string) => {
+        // Extract token if it's a full URL
+        let tokenToVerify = qrToken;
+        if (qrToken.includes('/presence/scan/')) {
+            const parts = qrToken.split('/presence/scan/');
+            if (parts.length > 1) {
+                tokenToVerify = parts[1];
+            }
+        }
+
+        // Basic length check if it's raw token
+        if (tokenToVerify.length !== 64) {
+            setError('Invalid QR code format. Please try again.');
+            return;
+        }
+
+        setIsVerifying(true);
+        setError(null);
+
+        try {
+            const response = await axios.post('/presence/verify', {
+                token: tokenToVerify,
+            });
+
+            if (response.data.success) {
+                onVerified();
+            } else {
+                setError(response.data.message || 'Verification failed');
+                setIsVerifying(false);
+            }
+        } catch (err: unknown) {
+            let message = 'Failed to verify presence';
+            if (axios.isAxiosError(err) && err.response?.data?.message) {
+                message = err.response.data.message;
+            }
+            setError(message);
+            setIsVerifying(false);
+        }
+    };
+
+    const handleManualVerify = () => {
+        performVerification(token);
+    };
+
+    const handleScan = (decodedText: string) => {
+        performVerification(decodedText);
+    };
+
+    return (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="scan" className="gap-2">
+                    <Camera className="h-4 w-4" />
+                    Scan Camera
+                </TabsTrigger>
+                <TabsTrigger value="manual" className="gap-2">
+                    <Keyboard className="h-4 w-4" />
+                    Manual Entry
+                </TabsTrigger>
+            </TabsList>
+
+            <div className="py-4">
+                {error && (
+                    <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        {error}
+                    </div>
+                )}
+
+                <TabsContent value="scan" className="mt-0">
+                    {isVerifying ? (
+                        <div className="flex h-[250px] flex-col items-center justify-center space-y-4 rounded-lg border border-dashed bg-muted/30">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="text-sm font-medium text-muted-foreground">
+                                Verifying scan...
+                            </p>
+                        </div>
+                    ) : (
+                        <QrCameraScanner onScan={handleScan} />
+                    )}
+                </TabsContent>
+
+                <TabsContent value="manual" className="mt-0 space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="qr-token">Verification Code</Label>
+                        <Input
+                            id="qr-token"
+                            placeholder="Enter the 64-character code..."
+                            value={token}
+                            onChange={(e) => {
+                                setToken(e.target.value);
+                                setError(null);
+                            }}
+                            className="font-mono text-sm"
+                            disabled={isVerifying}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            {token.length}/64 characters
+                        </p>
+                    </div>
+
+                    <Button
+                        onClick={handleManualVerify}
+                        disabled={token.length !== 64 || isVerifying}
+                        className="w-full gap-2"
+                    >
+                        {isVerifying ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Verifying...
+                            </>
+                        ) : (
+                            <>
+                                <Check className="h-4 w-4" />
+                                Verify Code
+                            </>
+                        )}
+                    </Button>
+                </TabsContent>
+            </div>
+        </Tabs>
     );
 }
 

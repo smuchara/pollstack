@@ -1,6 +1,5 @@
 import {
     AlignLeft,
-    Building2,
     Calendar,
     Check,
     Clock,
@@ -12,18 +11,17 @@ import {
     MapPin,
     Plus,
     QrCode,
+    Shield,
+    Trash2,
+    UserPlus,
     Users,
     X,
     Zap,
-    Trash2,
-    Shield,
-    UserPlus,
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -37,7 +35,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { ExtractedUser } from './poll-invite-review-modal';
 import { ProxyAssignmentModal, ProxyUser } from './proxy-assignment-modal';
-
 
 export interface User {
     id: number;
@@ -80,8 +77,10 @@ interface PollFormSharedProps {
     // Updated props for inline list and proxies
     reviewedUsers?: ExtractedUser[];
     onReviewedUsersChange?: (users: ExtractedUser[]) => void;
-    proxies?: {principal: string|number, proxy: string|number}[];
-    onProxiesChange?: (proxies: {principal: string|number, proxy: string|number}[]) => void;
+    proxies?: { principal: string | number; proxy: string | number }[];
+    onProxiesChange?: (
+        proxies: { principal: string | number; proxy: string | number }[],
+    ) => void;
 }
 
 export function PollFormShared({
@@ -106,18 +105,27 @@ export function PollFormShared({
     // Helpers for Proxy Modal
     const availableProxyUsers = useMemo(() => {
         // Map existing selected users
-        const existing = selectedUsers.map(id => {
-            const u = users.find(x => x.id === id);
-            // Ensure type is 'existing' literal
-            return u ? { id: u.id, name: u.name, email: u.email, type: 'existing' as const } : null;
-        }).filter((x): x is ProxyUser => x !== null);
+        const existing = selectedUsers
+            .map((id) => {
+                const u = users.find((x) => x.id === id);
+                // Ensure type is 'existing' literal
+                return u
+                    ? {
+                          id: u.id,
+                          name: u.name,
+                          email: u.email,
+                          type: 'existing' as const,
+                      }
+                    : null;
+            })
+            .filter((x) => x !== null) as ProxyUser[];
 
         // Map extracted users
-        const extracted: ProxyUser[] = reviewedUsers.map(u => ({
+        const extracted: ProxyUser[] = reviewedUsers.map((u) => ({
             id: u.id, // Temp ID from extraction
             name: u.name,
             email: u.email,
-            type: 'new'
+            type: 'new',
         }));
 
         return [...existing, ...extracted];
@@ -126,39 +134,50 @@ export function PollFormShared({
     const handleAssignProxy = (principal: ProxyUser, proxy: ProxyUser) => {
         if (!onProxiesChange) return;
         // Check duplication
-        const exists = proxies.find(p => p.principal === principal.id);
+        const exists = proxies.find((p) => p.principal === principal.id);
         if (exists) {
             // Update or ignore? Let's update
-             onProxiesChange(proxies.map(p => p.principal === principal.id ? { ...p, proxy: proxy.id } : p));
+            onProxiesChange(
+                proxies.map((p) =>
+                    p.principal === principal.id
+                        ? { ...p, proxy: proxy.id }
+                        : p,
+                ),
+            );
         } else {
-             onProxiesChange([...proxies, { principal: principal.id, proxy: proxy.id }]);
+            onProxiesChange([
+                ...proxies,
+                { principal: principal.id, proxy: proxy.id },
+            ]);
         }
     };
 
     const getProxyName = (proxyId: string | number) => {
-        const p = availableProxyUsers.find(u => u?.id == proxyId); // loose eq for string/number match
+        const p = availableProxyUsers.find((u) => u?.id == proxyId); // loose eq for string/number match
         return p ? p.name : 'Unknown';
     };
 
     const removeProxy = (principalId: string | number) => {
         if (!onProxiesChange) return;
-        onProxiesChange(proxies.filter(p => p.principal !== principalId));
+        onProxiesChange(proxies.filter((p) => p.principal !== principalId));
     };
-    
+
     const removeReviewedUser = (id: number) => {
         if (!onReviewedUsersChange) return;
-        onReviewedUsersChange(reviewedUsers.filter(u => u.id !== id));
+        onReviewedUsersChange(reviewedUsers.filter((u) => u.id !== id));
         // Also remove any proxies associated
         if (onProxiesChange) {
-            onProxiesChange(proxies.filter(p => p.principal !== id && p.proxy !== id));
+            onProxiesChange(
+                proxies.filter((p) => p.principal !== id && p.proxy !== id),
+            );
         }
     };
 
-    const filteredReviewedUsers = reviewedUsers.filter(u => 
-        u.name.toLowerCase().includes(reviewedUserSearch.toLowerCase()) || 
-        u.email.toLowerCase().includes(reviewedUserSearch.toLowerCase())
+    const filteredReviewedUsers = reviewedUsers.filter(
+        (u) =>
+            u.name.toLowerCase().includes(reviewedUserSearch.toLowerCase()) ||
+            u.email.toLowerCase().includes(reviewedUserSearch.toLowerCase()),
     );
-
 
     const toggleUser = (userId: number) => {
         if (selectedUsers.includes(userId)) {
@@ -284,7 +303,9 @@ export function PollFormShared({
             <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
                 <div className="flex items-center gap-2">
                     <QrCode className="h-5 w-5 text-primary" />
-                    <Label className="text-base font-medium">Voting Access Mode</Label>
+                    <Label className="text-base font-medium">
+                        Voting Access Mode
+                    </Label>
                 </div>
                 <p className="text-sm text-muted-foreground">
                     Choose how participants are allowed to vote in this poll.
@@ -302,9 +323,14 @@ export function PollFormShared({
                             type="radio"
                             name="voting_access_mode"
                             value="remote_only"
-                            checked={formData.voting_access_mode === 'remote_only'}
+                            checked={
+                                formData.voting_access_mode === 'remote_only'
+                            }
                             onChange={(e) =>
-                                onFormDataChange('voting_access_mode', e.target.value)
+                                onFormDataChange(
+                                    'voting_access_mode',
+                                    e.target.value,
+                                )
                             }
                             className="sr-only"
                         />
@@ -320,7 +346,7 @@ export function PollFormShared({
                             </div>
                         </div>
                         {formData.voting_access_mode === 'remote_only' && (
-                            <div className="absolute right-2 top-2">
+                            <div className="absolute top-2 right-2">
                                 <Check className="h-4 w-4 text-primary" />
                             </div>
                         )}
@@ -338,9 +364,15 @@ export function PollFormShared({
                             type="radio"
                             name="voting_access_mode"
                             value="on_premise_only"
-                            checked={formData.voting_access_mode === 'on_premise_only'}
+                            checked={
+                                formData.voting_access_mode ===
+                                'on_premise_only'
+                            }
                             onChange={(e) =>
-                                onFormDataChange('voting_access_mode', e.target.value)
+                                onFormDataChange(
+                                    'voting_access_mode',
+                                    e.target.value,
+                                )
                             }
                             className="sr-only"
                         />
@@ -356,7 +388,7 @@ export function PollFormShared({
                             </div>
                         </div>
                         {formData.voting_access_mode === 'on_premise_only' && (
-                            <div className="absolute right-2 top-2">
+                            <div className="absolute top-2 right-2">
                                 <Check className="h-4 w-4 text-primary" />
                             </div>
                         )}
@@ -376,7 +408,10 @@ export function PollFormShared({
                             value="hybrid"
                             checked={formData.voting_access_mode === 'hybrid'}
                             onChange={(e) =>
-                                onFormDataChange('voting_access_mode', e.target.value)
+                                onFormDataChange(
+                                    'voting_access_mode',
+                                    e.target.value,
+                                )
                             }
                             className="sr-only"
                         />
@@ -392,11 +427,14 @@ export function PollFormShared({
                             </div>
                         </div>
                         {formData.voting_access_mode === 'hybrid' && (
-                            <div className="absolute right-2 top-2">
+                            <div className="absolute top-2 right-2">
                                 <Check className="h-4 w-4 text-primary" />
                             </div>
                         )}
-                        <Badge variant="secondary" className="absolute bottom-2 right-2 text-[10px]">
+                        <Badge
+                            variant="secondary"
+                            className="absolute right-2 bottom-2 text-[10px]"
+                        >
                             Default
                         </Badge>
                     </label>
@@ -444,29 +482,35 @@ export function PollFormShared({
                         </TabsList>
 
                         <TabsContent value="bulk" className="mt-4 space-y-4">
-                            
                             {/* Always show upload to add more? Or replace? 
                                 User asked for "users extracted... appear inside".
                                 Let's keep upload visible if list is empty, or collapsed if not.
                              */}
-                             
-                             <div className="space-y-3">
+
+                            <div className="space-y-3">
                                 {reviewedUsers.length === 0 && (
                                     <div className="rounded-lg border border-dashed p-6 text-center hover:bg-muted/50">
-                                         <Input
+                                        <Input
                                             type="file"
                                             accept=".xlsx,.xls,.csv"
                                             className="mx-auto max-w-xs"
                                             onChange={(e) => {
-                                                if (e.target.files?.[0] && onInviteFileChange) {
-                                                    onInviteFileChange(e.target.files[0]);
+                                                if (
+                                                    e.target.files?.[0] &&
+                                                    onInviteFileChange
+                                                ) {
+                                                    onInviteFileChange(
+                                                        e.target.files[0],
+                                                    );
                                                 }
                                             }}
                                         />
-                                        <p className="mt-2 text-xs text-muted-foreground">Upload Excel/CSV to invite users.</p>
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Upload Excel/CSV to invite users.
+                                        </p>
                                     </div>
                                 )}
-                             </div>
+                            </div>
 
                             {/* Inline List of Extracted Users */}
                             {reviewedUsers.length > 0 && (
@@ -474,23 +518,32 @@ export function PollFormShared({
                                     {/* Sticky Toolbar */}
                                     <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-muted/40 p-2 backdrop-blur">
                                         <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="bg-background">
+                                            <Badge
+                                                variant="outline"
+                                                className="bg-background"
+                                            >
                                                 {reviewedUsers.length} Users
                                             </Badge>
                                             {/* Search for reviewed users */}
-                                            <Input 
-                                                className="h-8 w-40 bg-background text-xs" 
-                                                placeholder="Search list..." 
+                                            <Input
+                                                className="h-8 w-40 bg-background text-xs"
+                                                placeholder="Search list..."
                                                 value={reviewedUserSearch}
-                                                onChange={(e) => setReviewedUserSearch(e.target.value)}
+                                                onChange={(e) =>
+                                                    setReviewedUserSearch(
+                                                        e.target.value,
+                                                    )
+                                                }
                                             />
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Button 
-                                                type="button" 
-                                                size="sm" 
+                                            <Button
+                                                type="button"
+                                                size="sm"
                                                 variant="secondary"
-                                                onClick={() => setIsProxyModalOpen(true)}
+                                                onClick={() =>
+                                                    setIsProxyModalOpen(true)
+                                                }
                                                 className="h-8 gap-2 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300"
                                             >
                                                 <Shield className="h-3.5 w-3.5" />
@@ -500,7 +553,9 @@ export function PollFormShared({
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => onReviewedUsersChange?.([])}
+                                                onClick={() =>
+                                                    onReviewedUsersChange?.([])
+                                                }
                                                 className="h-8 w-8 p-0 text-destructive"
                                                 title="Clear All"
                                             >
@@ -512,82 +567,128 @@ export function PollFormShared({
                                     {/* Scrollable list */}
                                     <div className="max-h-[300px] overflow-auto p-2">
                                         {filteredReviewedUsers.length === 0 ? (
-                                             <p className="py-4 text-center text-sm text-muted-foreground">No users match your search.</p>
+                                            <p className="py-4 text-center text-sm text-muted-foreground">
+                                                No users match your search.
+                                            </p>
                                         ) : (
                                             <div className="space-y-1">
-                                                {filteredReviewedUsers.map((user) => {
-                                                    const proxy = proxies.find(p => p.principal === user.id);
-                                                    return (
-                                                        <div key={user.id} className="flex items-center justify-between rounded p-2 hover:bg-muted/50">
-                                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                                                                    {user.name.charAt(0).toUpperCase()}
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <p className="truncate text-sm font-medium">{user.name}</p>
-                                                                        {proxy && (
-                                                                            <Badge variant="outline" className="h-5 gap-1 border-purple-200 bg-purple-50 px-1 text-[10px] text-purple-700">
-                                                                                <Shield className="h-3 w-3" />
-                                                                                Proxy: {getProxyName(proxy.proxy)}
-                                                                            </Badge>
-                                                                        )}
+                                                {filteredReviewedUsers.map(
+                                                    (user) => {
+                                                        const proxy =
+                                                            proxies.find(
+                                                                (p) =>
+                                                                    p.principal ===
+                                                                    user.id,
+                                                            );
+                                                        return (
+                                                            <div
+                                                                key={user.id}
+                                                                className="flex items-center justify-between rounded p-2 hover:bg-muted/50"
+                                                            >
+                                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                                                                        {user.name
+                                                                            .charAt(
+                                                                                0,
+                                                                            )
+                                                                            .toUpperCase()}
                                                                     </div>
-                                                                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                                                                    <div className="min-w-0">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <p className="truncate text-sm font-medium">
+                                                                                {
+                                                                                    user.name
+                                                                                }
+                                                                            </p>
+                                                                            {proxy && (
+                                                                                <Badge
+                                                                                    variant="outline"
+                                                                                    className="h-5 gap-1 border-purple-200 bg-purple-50 px-1 text-[10px] text-purple-700"
+                                                                                >
+                                                                                    <Shield className="h-3 w-3" />
+                                                                                    Proxy:{' '}
+                                                                                    {getProxyName(
+                                                                                        proxy.proxy,
+                                                                                    )}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="truncate text-xs text-muted-foreground">
+                                                                            {
+                                                                                user.email
+                                                                            }
+                                                                        </p>
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-1">
-                                                                {proxy && (
+                                                                <div className="flex items-center gap-1">
+                                                                    {proxy && (
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                                                            onClick={() =>
+                                                                                removeProxy(
+                                                                                    user.id,
+                                                                                )
+                                                                            }
+                                                                            title="Remove Proxy"
+                                                                        >
+                                                                            <Shield className="h-3.5 w-3.5 fill-current opacity-50" />
+                                                                        </Button>
+                                                                    )}
                                                                     <Button
                                                                         type="button"
                                                                         variant="ghost"
                                                                         size="sm"
                                                                         className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                                                        onClick={() => removeProxy(user.id)}
-                                                                        title="Remove Proxy"
+                                                                        onClick={() =>
+                                                                            removeReviewedUser(
+                                                                                user.id,
+                                                                            )
+                                                                        }
                                                                     >
-                                                                        <Shield className="h-3.5 w-3.5 fill-current opacity-50" />
+                                                                        <X className="h-4 w-4" />
                                                                     </Button>
-                                                                )}
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                                                    onClick={() => removeReviewedUser(user.id)}
-                                                                >
-                                                                    <X className="h-4 w-4" />
-                                                                </Button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    },
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     {/* Footer with add more option */}
                                     <div className="border-t bg-muted/20 p-2 text-center">
-                                       <div className="relative">
+                                        <div className="relative">
                                             <Input
                                                 type="file"
                                                 accept=".xlsx,.xls,.csv"
                                                 className="absolute inset-0 cursor-pointer opacity-0"
                                                 onChange={(e) => {
-                                                    if (e.target.files?.[0] && onInviteFileChange) {
-                                                        onInviteFileChange(e.target.files[0]);
+                                                    if (
+                                                        e.target.files?.[0] &&
+                                                        onInviteFileChange
+                                                    ) {
+                                                        onInviteFileChange(
+                                                            e.target.files[0],
+                                                        );
                                                     }
                                                 }}
                                             />
-                                            <Button variant="outline" size="sm" className="w-full gap-2 border-dashed">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full gap-2 border-dashed"
+                                            >
                                                 <UserPlus className="h-4 w-4" />
                                                 Import More Users
                                             </Button>
-                                       </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
-
                         </TabsContent>
 
                         <TabsContent value="users" className="mt-4">
@@ -675,8 +776,7 @@ export function PollFormShared({
                         </TabsContent>
                     </Tabs>
 
-                    {(inviteFile ||
-                        selectedUsers.length > 0) && (
+                    {(inviteFile || selectedUsers.length > 0) && (
                         <div className="flex items-center gap-2 border-t pt-2 text-sm">
                             <Check className="h-4 w-4 text-green-500" />
                             <span>

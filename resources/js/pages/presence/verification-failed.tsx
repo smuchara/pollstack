@@ -1,8 +1,15 @@
 import { Head, Link } from '@inertiajs/react';
-import { AlertCircle, ArrowLeft, Home, QrCode, RefreshCw } from 'lucide-react';
+import { AlertCircle, Home, QrCode, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 
 interface Props {
     message: string;
@@ -12,7 +19,7 @@ export default function VerificationFailed({ message }: Props) {
     return (
         <>
             <Head title="Verification Failed" />
-            
+
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
@@ -35,12 +42,19 @@ export default function VerificationFailed({ message }: Props) {
                         </div>
 
                         <div className="space-y-2 text-sm text-muted-foreground">
-                            <p className="font-medium">Common reasons for failure:</p>
+                            <p className="font-medium">
+                                Common reasons for failure:
+                            </p>
                             <ul className="list-inside list-disc space-y-1">
-                                <li>The QR code has expired (codes refresh every 2 minutes)</li>
+                                <li>
+                                    The QR code has expired (codes refresh every
+                                    2 minutes)
+                                </li>
                                 <li>The QR code has already been used</li>
                                 <li>The poll is not currently active</li>
-                                <li>You're not eligible to vote in this poll</li>
+                                <li>
+                                    You're not eligible to vote in this poll
+                                </li>
                             </ul>
                         </div>
                     </CardContent>
@@ -54,7 +68,7 @@ export default function VerificationFailed({ message }: Props) {
                             <RefreshCw className="h-4 w-4" />
                             Try Scanning Again
                         </Button>
-                        
+
                         <div className="flex w-full gap-2">
                             <Button
                                 variant="outline"
@@ -66,7 +80,7 @@ export default function VerificationFailed({ message }: Props) {
                                     View Polls
                                 </Link>
                             </Button>
-                            
+
                             <Button
                                 variant="ghost"
                                 className="flex-1 gap-2"

@@ -1,7 +1,14 @@
-import { useRef, useState, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Search, Trash2, CheckCircle2, User as UserIcon, AlertCircle } from 'lucide-react';
+import {
+    AlertCircle,
+    CheckCircle2,
+    Search,
+    Trash2,
+    User as UserIcon,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -12,7 +19,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 
 export interface ExtractedUser {
     id: number;
@@ -50,7 +56,7 @@ export function PollInviteReviewModal({
         return users.filter(
             (u) =>
                 u.email.toLowerCase().includes(lowerQuery) ||
-                u.name.toLowerCase().includes(lowerQuery)
+                u.name.toLowerCase().includes(lowerQuery),
         );
     }, [users, searchQuery]);
 
@@ -76,8 +82,10 @@ export function PollInviteReviewModal({
                 <DialogHeader>
                     <DialogTitle>Review Imported Users</DialogTitle>
                     <DialogDescription>
-                        We successfully extracted <strong>{initialUsers.length}</strong> users from your file.
-                        Review the list below and remove any users you don't want to invite.
+                        We successfully extracted{' '}
+                        <strong>{initialUsers.length}</strong> users from your
+                        file. Review the list below and remove any users you
+                        don't want to invite.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -85,7 +93,7 @@ export function PollInviteReviewModal({
                     {/* Search and Stats */}
                     <div className="flex items-center justify-between gap-4">
                         <div className="relative flex-1">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search by name or email..."
                                 value={searchQuery}
@@ -116,46 +124,54 @@ export function PollInviteReviewModal({
                                     <p>No users found matching your search.</p>
                                 </div>
                             ) : (
-                                rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                    const user = filteredUsers[virtualRow.index];
-                                    return (
-                                        <div
-                                            key={user.id}
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                height: `${virtualRow.size}px`,
-                                                transform: `translateY(${virtualRow.start}px)`,
-                                            }}
-                                            className="flex items-center justify-between border-b p-3 hover:bg-muted/50"
-                                        >
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                                    <UserIcon className="h-4 w-4" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-sm font-medium">
-                                                        {user.name || 'Unknown Name'}
-                                                    </p>
-                                                    <p className="truncate text-xs text-muted-foreground">
-                                                        {user.email}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => removeUser(user.id)}
-                                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                rowVirtualizer
+                                    .getVirtualItems()
+                                    .map((virtualRow) => {
+                                        const user =
+                                            filteredUsers[virtualRow.index];
+                                        return (
+                                            <div
+                                                key={user.id}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    width: '100%',
+                                                    height: `${virtualRow.size}px`,
+                                                    transform: `translateY(${virtualRow.start}px)`,
+                                                }}
+                                                className="flex items-center justify-between border-b p-3 hover:bg-muted/50"
                                             >
-                                                <Trash2 className="h-4 w-4" />
-                                                <span className="sr-only">Remove</span>
-                                            </Button>
-                                        </div>
-                                    );
-                                })
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                                        <UserIcon className="h-4 w-4" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-medium">
+                                                            {user.name ||
+                                                                'Unknown Name'}
+                                                        </p>
+                                                        <p className="truncate text-xs text-muted-foreground">
+                                                            {user.email}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        removeUser(user.id)
+                                                    }
+                                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">
+                                                        Remove
+                                                    </span>
+                                                </Button>
+                                            </div>
+                                        );
+                                    })
                             )}
                         </div>
                     </div>
@@ -163,7 +179,8 @@ export function PollInviteReviewModal({
                     {users.length === 0 && (
                         <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                             <AlertCircle className="h-4 w-4" />
-                            You have removed all users. The invite list is empty.
+                            You have removed all users. The invite list is
+                            empty.
                         </div>
                     )}
                 </div>
@@ -172,7 +189,10 @@ export function PollInviteReviewModal({
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleConfirm} disabled={users.length === 0}>
+                    <Button
+                        onClick={handleConfirm}
+                        disabled={users.length === 0}
+                    >
                         <CheckCircle2 className="mr-2 h-4 w-4" />
                         Confirm & Add {users.length} Users
                     </Button>

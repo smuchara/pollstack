@@ -1,21 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
-import { QrCode, RefreshCw, Copy, Check, Clock, Loader2, AlertCircle, Maximize2 } from 'lucide-react';
 import axios from 'axios';
-import toast from 'react-hot-toast';
+import {
+    AlertCircle,
+    Check,
+    Clock,
+    Copy,
+    Loader2,
+    Maximize2,
+    QrCode,
+    RefreshCw,
+} from 'lucide-react';
 import QRCode from 'qrcode';
+import { useCallback, useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface QrTokenData {
     success: boolean;
@@ -47,7 +61,6 @@ export function QrCodeDisplay({
     organizationSlug,
     pollQuestion,
     autoRefresh = true,
-    refreshInterval = 90,
 }: QrCodeDisplayProps) {
     const [qrData, setQrData] = useState<QrTokenData | null>(null);
     const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -69,26 +82,33 @@ export function QrCodeDisplay({
 
         try {
             const response = await axios.post(generateEndpoint);
-            
+
             if (response.data.success) {
                 setQrData(response.data);
                 setRemainingTime(response.data.remaining_seconds);
-                
+
                 // Generate QR code image
-                const qrCodeDataUrl = await QRCode.toDataURL(response.data.verification_url, {
-                    width: 400,
-                    margin: 2,
-                    color: {
-                        dark: '#000000',
-                        light: '#ffffff',
+                const qrCodeDataUrl = await QRCode.toDataURL(
+                    response.data.verification_url,
+                    {
+                        width: 400,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#ffffff',
+                        },
                     },
-                });
+                );
                 setQrCodeUrl(qrCodeDataUrl);
             } else {
                 setError(response.data.message || 'Failed to generate QR code');
             }
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to generate QR code');
+        } catch (err: unknown) {
+            let message = 'Failed to generate QR code';
+            if (axios.isAxiosError(err) && err.response?.data?.message) {
+                message = err.response.data.message;
+            }
+            setError(message);
         } finally {
             setIsLoading(false);
         }
@@ -161,7 +181,8 @@ export function QrCodeDisplay({
                             Presence Verification QR Code
                         </CardTitle>
                         <CardDescription className="mt-1">
-                            Display this QR code at the venue for attendees to scan
+                            Display this QR code at the venue for attendees to
+                            scan
                         </CardDescription>
                     </div>
                     <Badge variant="outline" className="gap-1">
@@ -178,12 +199,19 @@ export function QrCodeDisplay({
                             <AlertCircle className="h-8 w-8 text-destructive" />
                         </div>
                         <div>
-                            <p className="font-medium text-destructive">{error}</p>
+                            <p className="font-medium text-destructive">
+                                {error}
+                            </p>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                This poll may not support on-premise verification.
+                                This poll may not support on-premise
+                                verification.
                             </p>
                         </div>
-                        <Button onClick={generateQrToken} disabled={isLoading} className="gap-2">
+                        <Button
+                            onClick={generateQrToken}
+                            disabled={isLoading}
+                            className="gap-2"
+                        >
                             {isLoading ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
@@ -202,15 +230,15 @@ export function QrCodeDisplay({
                                     alt="Verification QR Code"
                                     className="h-64 w-64"
                                 />
-                                
+
                                 {/* Timer overlay */}
                                 <div
                                     className={`absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-sm font-medium shadow-lg ${
                                         getUrgencyLevel() === 'critical'
-                                            ? 'bg-red-500 text-white animate-pulse'
+                                            ? 'animate-pulse bg-red-500 text-white'
                                             : getUrgencyLevel() === 'warning'
-                                            ? 'bg-orange-500 text-white'
-                                            : 'bg-green-500 text-white'
+                                              ? 'bg-orange-500 text-white'
+                                              : 'bg-green-500 text-white'
                                     }`}
                                 >
                                     <span className="flex items-center gap-1.5">
@@ -221,9 +249,16 @@ export function QrCodeDisplay({
                             </div>
 
                             {/* Fullscreen button */}
-                            <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+                            <Dialog
+                                open={isFullscreen}
+                                onOpenChange={setIsFullscreen}
+                            >
                                 <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="mt-6 gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-6 gap-2"
+                                    >
                                         <Maximize2 className="h-4 w-4" />
                                         Fullscreen Display
                                     </Button>
@@ -250,10 +285,11 @@ export function QrCodeDisplay({
                                         <div
                                             className={`mt-8 rounded-full px-8 py-3 text-xl font-bold ${
                                                 getUrgencyLevel() === 'critical'
-                                                    ? 'bg-red-500 text-white animate-pulse'
-                                                    : getUrgencyLevel() === 'warning'
-                                                    ? 'bg-orange-500 text-white'
-                                                    : 'bg-green-500 text-white'
+                                                    ? 'animate-pulse bg-red-500 text-white'
+                                                    : getUrgencyLevel() ===
+                                                        'warning'
+                                                      ? 'bg-orange-500 text-white'
+                                                      : 'bg-green-500 text-white'
                                             }`}
                                         >
                                             {formatTime(remainingTime)}
@@ -320,10 +356,15 @@ export function QrCodeDisplay({
                         <div className="text-center">
                             <p className="font-medium">Generate QR Code</p>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Click below to generate a verification QR code for this poll
+                                Click below to generate a verification QR code
+                                for this poll
                             </p>
                         </div>
-                        <Button onClick={generateQrToken} disabled={isLoading} className="gap-2">
+                        <Button
+                            onClick={generateQrToken}
+                            disabled={isLoading}
+                            className="gap-2"
+                        >
                             {isLoading ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
