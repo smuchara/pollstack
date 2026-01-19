@@ -6,16 +6,44 @@ use App\Models\Poll;
 use App\Models\Vote;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class PollVoteController extends Controller
 {
     public function store(Request $request, Poll $poll)
     {
-        $validated = $request->validate([
-            'option_id' => 'required|exists:poll_options,id',
+        Log::info('Vote request received', [
+            'user_id' => $request->user()->id,
+            'poll_id' => $poll->id,
+            'payload' => $request->all()
         ]);
 
-        $user = $request->user();
+        $validated = $request->validate([
+            'option_id' => 'required|exists:poll_options,id',
+            'on_behalf_of' => 'nullable|exists:users,id',
+        ]);
+
+        $currentUser = $request->user();
+        $votingAsUser = $currentUser;
+        $proxyUserId = null;
+
+        // Handle proxy voting
+        if (isset($validated['on_behalf_of']) && $validated['on_behalf_of'] != $currentUser->id) {
+            // Check if valid proxy
+            $isProxy = $poll->proxies()
+                ->where('user_id', $validated['on_behalf_of'])
+                ->where('proxy_user_id', $currentUser->id)
+                ->exists();
+
+            if (!$isProxy) {
+                throw ValidationException::withMessages([
+                    'on_behalf_of' => 'You are not authorized to vote on behalf of this user.',
+                ]);
+            }
+
+            $votingAsUser = \App\Models\User::find($validated['on_behalf_of']);
+            $proxyUserId = $currentUser->id;
+        }
 
         // Check if poll is active
         if ($poll->status !== 'active') {
@@ -32,25 +60,35 @@ class PollVoteController extends Controller
         }
 
         // Check if user is eligible to vote on this poll
-        if (! $poll->canBeVotedOnBy($user)) {
+        if (!$poll->canBeVotedOnBy($votingAsUser)) {
             throw ValidationException::withMessages([
-                'poll' => 'You are not eligible to vote in this poll.',
+                'poll' => 'The user you are voting for is not eligible to vote in this poll.',
             ]);
         }
 
         // Check if already voted
-        if ($poll->votes()->where('user_id', $user->id)->exists()) {
+        if ($poll->votes()->where('user_id', $votingAsUser->id)->exists()) {
             throw ValidationException::withMessages([
-                'poll' => 'You have already voted in this poll.',
+                'poll' => 'This user has already voted in this poll.',
             ]);
         }
 
-        Vote::create([
+        // Determine verification type
+        $verificationType = 'remote';
+        if ($poll->hasUserVerifiedOnPremise($votingAsUser)) {
+            $verificationType = 'on_premise';
+        }
+
+        $vote = Vote::create([
             'poll_id' => $poll->id,
             'poll_option_id' => $validated['option_id'],
-            'user_id' => $user->id,
+            'user_id' => $votingAsUser->id,
+            'proxy_user_id' => $proxyUserId,
             'ip_address' => $request->ip(),
+            'verification_type' => $verificationType,
         ]);
+
+        Log::info('Vote created', ['vote_id' => $vote->id, 'user_id' => $votingAsUser->id, 'proxy_user_id' => $proxyUserId]);
 
         return back()->with('success', 'Vote cast successfully.');
     }

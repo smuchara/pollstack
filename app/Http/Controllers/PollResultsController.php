@@ -89,6 +89,12 @@ class PollResultsController extends Controller
             $trendPercentage = 100; // If no votes yesterday but votes today, it's a 100% increase
         }
 
+        // Calculate verification breakdown
+        $verificationBreakdown = [
+            'on_premise' => $poll->votes()->where('verification_type', 'on_premise')->count(),
+            'remote' => $poll->votes()->where('verification_type', '!=', 'on_premise')->orWhereNull('verification_type')->count(),
+        ];
+
         return Inertia::render('polls/results', [
             'poll' => [
                 'id' => $poll->id,
@@ -110,6 +116,7 @@ class PollResultsController extends Controller
                     'start' => $poll->start_at,
                     'end' => $poll->end_at,
                 ],
+                'verification_breakdown' => $verificationBreakdown,
             ],
             'votingTrend' => $votingTrend,
             'percentageBreakdown' => $percentageBreakdown,

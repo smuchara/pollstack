@@ -10,7 +10,9 @@ class Vote extends Model
         'poll_id',
         'poll_option_id',
         'user_id',
+        'proxy_user_id',
         'ip_address',
+        'verification_type',
     ];
 
     public function poll()
@@ -26,5 +28,10 @@ class Vote extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function proxyUser()
+    {
+        return $this->belongsTo(User::class, 'proxy_user_id');
     }
 }

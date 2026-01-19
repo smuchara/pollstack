@@ -11,7 +11,8 @@ class PollController extends Controller
 {
     public function __construct(
         private PresenceVerificationService $presenceService
-    ) {}
+    ) {
+    }
 
     public function index(Request $request)
     {
@@ -29,7 +30,7 @@ class PollController extends Controller
                     'invitedUsers',
                     'invitedDepartments',
                 ])
-                ->when($user->isSuperAdmin() && ! $user->organization_id, function ($query) {
+                ->when($user->isSuperAdmin() && !$user->organization_id, function ($query) {
                     // Super admins without organization see only system-wide polls
                     $query->whereNull('organization_id');
                 })
@@ -39,7 +40,7 @@ class PollController extends Controller
                     $query->where('organization_id', $user->organization_id)
                         ->visibleTo($user);
                 })
-                ->when(! $user->isSuperAdmin() && ! $user->organization_id, function ($query) {
+                ->when(!$user->isSuperAdmin() && !$user->organization_id, function ($query) {
                     // Users without organization see only system-wide polls
                     $query->whereNull('organization_id');
                 })
@@ -82,6 +83,22 @@ class PollController extends Controller
             $poll->user_vote = $poll->votes()
                 ->where('user_id', $user->id)
                 ->first();
+
+            // Add proxy assignments
+            $poll->proxy_assignments = $poll->proxies()
+                ->where('proxy_user_id', $user->id)
+                ->with('originalUser')
+                ->get()
+                ->map(function ($proxy) use ($poll) {
+                    $principal = $proxy->originalUser;
+                    $hasVoted = $poll->votes()->where('user_id', $principal->id)->exists();
+
+                    return [
+                        'user_id' => $principal->id,
+                        'name' => $principal->name,
+                        'has_voted' => $hasVoted,
+                    ];
+                });
 
             // Add total votes count
             $poll->total_votes = $poll->votes()->count();
