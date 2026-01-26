@@ -26,11 +26,11 @@
                     <tr>
                         <td
                             style="background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%); padding: 40px; text-align: center; height: 160px; vertical-align: middle;">
-                            <img src="{{ isset($message) ? $message->embed(public_path('images/pollstackicon_white.svg')) : url('images/pollstackicon_white.svg') }}"
-                                alt="PollStack" width="60" style="display: block; margin: 0 auto; opacity: 0.9;">
+                            <img src="{{ isset($message) ? $message->embed(public_path('images/boardcoicon_white.svg')) : url('images/boardcoicon_white.svg') }}"
+                                alt="BoardCo" width="60" style="display: block; margin: 0 auto; opacity: 0.9;">
                             <h1
                                 style="color: #ffffff; margin: 20px 0 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em;">
-                                PollStack</h1>
+                                BoardCo</h1>
                         </td>
                     </tr>
 
@@ -180,13 +180,13 @@
                             style="background-color: #f9fafb; border-top: 1px solid #e5e7eb; padding: 24px; text-align: center;">
                             <div style="margin-bottom: 12px;">
                                 <!-- Logo (Small) -->
-                                <img src="{{ isset($message) ? $message->embed(public_path('images/pollstack.svg')) : url('images/pollstack.svg') }}"
-                                    alt="PollStack" width="24" style="vertical-align: middle; opacity: 0.7;">
+                                <img src="{{ isset($message) ? $message->embed(public_path('images/boardco.svg')) : url('images/boardco.svg') }}"
+                                    alt="BoardCo" width="24" style="vertical-align: middle; opacity: 0.7;">
                                 <span
-                                    style="font-weight: 600; color: #374151; margin-left: 8px; vertical-align: middle; font-size: 14px;">PollStack</span>
+                                    style="font-weight: 600; color: #374151; margin-left: 8px; vertical-align: middle; font-size: 14px;">BoardCo</span>
                             </div>
                             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                                &copy; {{ date('Y') }} PollStack. All rights reserved.
+                                &copy; {{ date('Y') }} BoardCo. All rights reserved.
                             </p>
                         </td>
                     </tr>

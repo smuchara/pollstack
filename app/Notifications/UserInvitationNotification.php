@@ -10,7 +10,8 @@ class UserInvitationNotification extends Notification
 {
     public function __construct(
         public UserInvitation $invitation
-    ) {}
+    ) {
+    }
 
     public function via(object $notifiable): array
     {
@@ -24,9 +25,9 @@ class UserInvitationNotification extends Notification
         $expiresAt = $this->invitation->expires_at->diffForHumans();
 
         return (new MailMessage)
-            ->subject('You\'ve been invited to join PollStack')
+            ->subject('You\'ve been invited to join BoardCo')
             ->greeting('Hello!')
-            ->line("{$inviterName} has invited you to join PollStack.")
+            ->line("{$inviterName} has invited you to join BoardCo.")
             ->line('Click the button below to accept the invitation and create your account.')
             ->action('Accept Invitation', $acceptUrl)
             ->line("This invitation will expire {$expiresAt}.")

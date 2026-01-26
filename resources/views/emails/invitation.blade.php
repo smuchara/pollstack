@@ -26,12 +26,13 @@
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td align="center">
-                                        <img src="{{ url('images/pollstackicon_white.svg') }}"
+                                        <img src="{{ url('images/boardcoicon_white.svg') }}"
                                             alt="{{ config('app.name') }}" width="48" height="48"
                                             style="display: block; margin: 0 auto 12px;">
                                         <h1
                                             style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                                            {{ config('app.name') }}</h1>
+                                            {{ config('app.name') }}
+                                        </h1>
                                     </td>
                                 </tr>
                             </table>
@@ -46,7 +47,8 @@
                                 style="margin: 0 0 16px; color: #1F2937; font-size: 32px; font-weight: 700; line-height: 1.2;">
                                 You're Invited! 🎉</h2>
                             <p style="margin: 0; color: #6B7280; font-size: 16px; line-height: 1.6;">Join
-                                {{ config('app.name') }} and start managing polls effortlessly</p>
+                                {{ config('app.name') }} and start managing polls effortlessly
+                            </p>
                         </td>
                     </tr>
 

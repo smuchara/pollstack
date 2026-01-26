@@ -18,7 +18,8 @@ class UserInvitationMail extends Mailable
      */
     public function __construct(
         public UserInvitation $invitation
-    ) {}
+    ) {
+    }
 
     /**
      * Get the message envelope.
@@ -26,7 +27,7 @@ class UserInvitationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'You\'ve been invited to join PollStack',
+            subject: 'You\'ve been invited to join BoardCo',
         );
     }
 

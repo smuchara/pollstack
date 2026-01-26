@@ -1,10 +1,13 @@
 import { ImgHTMLAttributes } from 'react';
 
-export default function AppLogoIcon({ className = '', ...props }: ImgHTMLAttributes<HTMLImageElement>) {
+export default function AppLogoIcon({
+    className = '',
+    ...props
+}: ImgHTMLAttributes<HTMLImageElement>) {
     return (
         <img
-            src="/images/pollstackicon_white.svg"
-            alt="Pollstack Logo"
+            src="/images/boardcoicon_white.svg"
+            alt="BoardCo Logo"
             className={`h-auto ${className}`}
             {...props}
         />

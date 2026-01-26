@@ -22,7 +22,7 @@ class TestEmail extends Command
             // Find the invitation for this email
             $invitation = UserInvitation::where('email', $email)->latest()->first();
 
-            if (! $invitation) {
+            if (!$invitation) {
                 $this->error("No invitation found for: {$email}");
 
                 return;
@@ -37,21 +37,21 @@ class TestEmail extends Command
 
                 $this->info("Invitation notification sent to: {$invitation->email}");
             } catch (\Exception $e) {
-                $this->error('Failed: '.$e->getMessage());
+                $this->error('Failed: ' . $e->getMessage());
             }
 
             return;
         }
 
         try {
-            Mail::raw('This is a test email from PollStack to verify Gmail SMTP is working.', function ($message) use ($email) {
+            Mail::raw('This is a test email from BoardCo to verify Gmail SMTP is working.', function ($message) use ($email) {
                 $message->to($email)
-                    ->subject('PollStack Test Email');
+                    ->subject('BoardCo Test Email');
             });
 
             $this->info("Test email sent to: {$email}");
         } catch (\Exception $e) {
-            $this->error('Failed to send email: '.$e->getMessage());
+            $this->error('Failed to send email: ' . $e->getMessage());
         }
     }
 }

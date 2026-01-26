@@ -1,10 +1,11 @@
-# PollStack
+# BoardCo
 
 A modern, full-stack web application built with Laravel and React, featuring a comprehensive authentication system and user management capabilities.
 
 ## 🚀 Features
 
 ### Authentication & Security
+
 - **User Registration** - Secure user registration with validation
 - **Email Verification** - Verify user email addresses
 - **Login System** - Email-based authentication with rate limiting
@@ -13,12 +14,14 @@ A modern, full-stack web application built with Laravel and React, featuring a c
 - **Session Management** - Secure session handling with database storage
 
 ### User Management
+
 - **Profile Settings** - Update name, email, and profile information
 - **Password Management** - Change password with current password verification
 - **Account Deletion** - Soft delete user accounts with password confirmation
 - **Appearance Settings** - Theme customization support
 
 ### UI/UX
+
 - **Modern Interface** - Built with Radix UI components and Tailwind CSS
 - **Responsive Design** - Mobile-first, fully responsive layouts
 - **Dark Mode Support** - Built-in theme switching capability
@@ -28,6 +31,7 @@ A modern, full-stack web application built with Laravel and React, featuring a c
 ## 🛠️ Tech Stack
 
 ### Backend
+
 - **[Laravel 12](https://laravel.com/)** - Modern PHP framework
 - **[Laravel Fortify](https://laravel.com/docs/fortify)** - Authentication backend
 - **[Inertia.js](https://inertiajs.com/)** - Server-side routing with SPA feel
@@ -35,6 +39,7 @@ A modern, full-stack web application built with Laravel and React, featuring a c
 - **PHP 8.2+** - Latest PHP features
 
 ### Frontend
+
 - **[React 19](https://react.dev/)** - UI library
 - **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript
 - **[Tailwind CSS 4](https://tailwindcss.com/)** - Utility-first CSS framework
@@ -43,6 +48,7 @@ A modern, full-stack web application built with Laravel and React, featuring a c
 - **[Vite 7](https://vitejs.dev/)** - Next-generation build tool
 
 ### Development Tools
+
 - **[Pest](https://pestphp.com/)** - Testing framework
 - **[Laravel Pint](https://laravel.com/docs/pint)** - PHP code style fixer
 - **[ESLint](https://eslint.org/)** - JavaScript linting
@@ -67,6 +73,7 @@ composer setup
 ```
 
 This will:
+
 1. Install PHP dependencies
 2. Create `.env` file from `.env.example`
 3. Generate application key
@@ -77,50 +84,56 @@ This will:
 ### Manual Setup
 
 1. **Clone the repository**
-   ```bash
-   git clone <your-repository-url>
-   cd pollstack
-   ```
+
+    ```bash
+    git clone <your-repository-url>
+    cd boardco
+    ```
 
 2. **Install PHP dependencies**
-   ```bash
-   composer install
-   ```
+
+    ```bash
+    composer install
+    ```
 
 3. **Environment configuration**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
+
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
 
 4. **Configure database**
-   
-   By default, the application uses SQLite. The database file will be created automatically at `database/database.sqlite`.
-   
-   For other databases, update the `.env` file:
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=your_database
-   DB_USERNAME=your_username
-   DB_PASSWORD=your_password
-   ```
+
+    By default, the application uses SQLite. The database file will be created automatically at `database/database.sqlite`.
+
+    For other databases, update the `.env` file:
+
+    ```env
+    DB_CONNECTION=mysql
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=your_database
+    DB_USERNAME=your_username
+    DB_PASSWORD=your_password
+    ```
 
 5. **Run migrations**
-   ```bash
-   php artisan migrate
-   ```
+
+    ```bash
+    php artisan migrate
+    ```
 
 6. **Install Node.js dependencies**
-   ```bash
-   npm install
-   ```
+
+    ```bash
+    npm install
+    ```
 
 7. **Build frontend assets**
-   ```bash
-   npm run build
-   ```
+    ```bash
+    npm run build
+    ```
 
 ## 🚀 Development
 
@@ -133,6 +146,7 @@ composer dev
 ```
 
 This starts:
+
 - Laravel development server (http://localhost:8000)
 - Queue worker
 - Vite dev server with HMR
@@ -140,16 +154,19 @@ This starts:
 ### Individual Commands
 
 **Backend server:**
+
 ```bash
 php artisan serve
 ```
 
 **Frontend development:**
+
 ```bash
 npm run dev
 ```
 
 **Queue worker:**
+
 ```bash
 php artisan queue:listen
 ```
@@ -163,6 +180,7 @@ composer dev:ssr
 ```
 
 This enables:
+
 - SSR support with Inertia.js
 - Log monitoring with Laravel Pail
 - Automatic restarts on changes
@@ -184,7 +202,7 @@ php artisan test
 ## 📁 Project Structure
 
 ```
-pollstack/
+boardco/
 ├── app/
 │   ├── Actions/Fortify/      # Authentication actions
 │   ├── Http/Controllers/     # Application controllers
@@ -218,6 +236,7 @@ pollstack/
 ### Available Routes
 
 **Public Routes:**
+
 - `/` - Welcome page
 - `/login` - User login
 - `/register` - User registration
@@ -225,6 +244,7 @@ pollstack/
 - `/reset-password` - Password reset form
 
 **Authenticated Routes:**
+
 - `/dashboard` - User dashboard
 - `/settings/profile` - Profile management
 - `/settings/password` - Password change
@@ -234,27 +254,32 @@ pollstack/
 ### Configuration
 
 Authentication settings can be modified in:
+
 - `config/fortify.php` - Fortify features and options
 - `app/Providers/FortifyServiceProvider.php` - Custom authentication logic
 
 ## 🎨 Code Quality
 
 **Format code:**
+
 ```bash
 npm run format
 ```
 
 **Lint code:**
+
 ```bash
 npm run lint
 ```
 
 **Type check:**
+
 ```bash
 npm run types
 ```
 
 **PHP code style:**
+
 ```bash
 ./vendor/bin/pint
 ```
@@ -262,28 +287,31 @@ npm run types
 ## 🌐 Deployment
 
 1. **Build production assets:**
-   ```bash
-   npm run build
-   ```
+
+    ```bash
+    npm run build
+    ```
 
 2. **Optimize Laravel:**
-   ```bash
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   ```
+
+    ```bash
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    ```
 
 3. **Set proper permissions:**
-   ```bash
-   chmod -R 775 storage bootstrap/cache
-   ```
+
+    ```bash
+    chmod -R 775 storage bootstrap/cache
+    ```
 
 4. **Configure environment:**
-   - Set `APP_ENV=production`
-   - Set `APP_DEBUG=false`
-   - Configure production database
-   - Set up queue workers
-   - Configure mail settings
+    - Set `APP_ENV=production`
+    - Set `APP_DEBUG=false`
+    - Configure production database
+    - Set up queue workers
+    - Configure mail settings
 
 ## 🤝 Contributing
 
@@ -296,6 +324,7 @@ Contributions are welcome! Please follow these steps:
 5. Open a Pull Request
 
 Please ensure:
+
 - Code follows the existing style guidelines
 - All tests pass
 - New features include tests
@@ -316,6 +345,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📧 Support
 
 For issues and questions:
+
 - Create an issue in the repository
 - Check existing documentation
 - Review closed issues for solutions
